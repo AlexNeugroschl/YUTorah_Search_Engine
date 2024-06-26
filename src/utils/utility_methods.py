@@ -1,6 +1,7 @@
 from src.utils.data_layer import DataLayer
 import numpy as np
 import pandas as pd
+from typing import Union, List, Dict
 
 
 class UtilityMethods:
@@ -43,3 +44,17 @@ class UtilityMethods:
     def get_shiurs_by_teacher(self, teacher_id: int) -> np.ndarray:
         shiurs_df = self.dl.get_shiurs_by_teacher(teacher_id)
         return shiurs_df['shiurID'].unique().astype(int)
+
+    def get_categories_by_shiur(self, shiur_ids: Union[int, List[int]]) -> Dict[int, np.ndarray]:
+        if isinstance(shiur_ids, int):
+            shiur_ids = [shiur_ids]
+
+        shiur_cat_dict = {}
+        for id in shiur_ids:
+            shiur_cat_dict[id] = self.get_category_by_shiur(id)
+
+        return shiur_cat_dict
+
+    def get_category_by_shiur(self, shiur_id: int) -> np.ndarray:
+        shiurs_df = self.dl.get_shiur_details(shiur_id)
+        return shiurs_df['categoryName'].unique()
