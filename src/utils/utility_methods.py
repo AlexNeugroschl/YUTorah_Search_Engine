@@ -19,6 +19,14 @@ class UtilityMethods:
             ['queue', 'history'])]
         return queued_list['usbShiurKey'].unique().astype(int)
 
+    def get_user_favorite_teachers(self, user_id: int) -> np.ndarray:
+        favorites_df = self.dl.get_user_favorites(user_id)
+        return favorites_df[favorites_df['ufType'] == 'teacher']['ufForeignKey'].unique().astype(int)
+
+    def get_user_favorite_series(self, user_id: int) -> np.ndarray:
+        favorites_df = self.dl.get_user_favorites(user_id)
+        return favorites_df[favorites_df['ufType'] == 'series']['ufForeignKey'].unique().astype(int)
+
     def get_shiur_listen_history(self, shiur_id: int) -> pd.DataFrame:
         interactions_df = self.dl.get_shiur_interactions(shiur_id)
         listened_list = interactions_df[(interactions_df['usbUserKey'].notna()) &
@@ -29,13 +37,9 @@ class UtilityMethods:
         listened_list = self.get_shiur_listen_history(shiur_id)
         return listened_list['usbUserKey'].unique().astype(int)
 
-    def get_user_favorite_teachers(self, user_id: int) -> np.ndarray:
-        favorites_df = self.dl.get_user_favorites(user_id)
-        return favorites_df[favorites_df['ufType'] == 'teacher']['ufForeignKey'].unique().astype(int)
-
-    def get_user_favorite_series(self, user_id: int) -> np.ndarray:
-        favorites_df = self.dl.get_user_favorites(user_id)
-        return favorites_df[favorites_df['ufType'] == 'series']['ufForeignKey'].unique().astype(int)
-
     def get_shiur_details(self, shiur_id: int) -> pd.DataFrame:
         return self.dl.get_shiur_details(shiur_id)
+
+    def get_shiurs_by_teacher(self, teacher_id: int) -> np.ndarray:
+        shiurs_df = self.dl.get_shiurs_by_teacher(teacher_id)
+        return shiurs_df['shiurID'].unique().astype(int)

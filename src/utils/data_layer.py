@@ -27,6 +27,16 @@ class DataLayer:
         query = "SELECT * FROM userShiurBookmarks WHERE usbShiurKey = ?"
         return self.execute_query(query, params=(shiur_id,))
 
+    def get_shiurs_by_teacher(self, teacher_id: int):
+        query = """
+        SELECT *
+        FROM teachers t
+        JOIN shiurTeachers st ON t.teacherID = st.shiurTeacherTeacherKey 
+        JOIN shiurim s ON st.shiurTeacherShiurKey = s.shiurID 
+        WHERE teacherID = ?
+        """
+        return self.execute_query(query, params=(teacher_id,))
+
     def get_shiur_details(self, shiur_id: int):
         query = """
         SELECT *
