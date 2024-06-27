@@ -8,24 +8,38 @@ class ETL:
 
     def get_favorites_df(self):
         query_fav = """
-    SELECT ufUserKey as 'User', ufForeignKey as 'Key', ufType as 'FavoriteType', ufDateAdded as 'DateFavoriteAdded'
-    FROM userFavorites
-"""
+        SELECT 
+            ufUserKey as 'user',
+            ufForeignKey as 'key',
+            ufType as 'favorite_type',
+            ufDateAdded as 'date_favorite_added'
+        FROM userFavorites
+        """
         fav_chunks = pd.read_sql_query(query_fav, self.conn, chunksize=self.chunk_size)
         df_fav = pd.concat(fav_chunks)
-        return df_fav.sort_values(by='User', ascending=True)
+        return df_fav.sort_values(by='user', ascending=True)
     
     def get_bookmakrs_df(self):
         query_usb = """
-    SELECT usbUserKey as 'User', usbShiurKey as 'Shiur', usbSessionID as 'Session', usbBookmarkType as 'Bookmark', usbBookmarkTimeStamp as 'TimeStamp', usbDateAddedToQueue as 'QueueDate', usbIsPlayed as 'Played', usbDatePlayed as 'DatePlayed', usbIsDownloaded as 'Downloaded', usbDateDownloaded as 'DateDownloaded'
+    SELECT
+        usbUserKey as 'user',
+        usbShiurKey as 'shiur',
+        usbSessionID as 'session',
+        usbBookmarkType as 'bookmark',
+        usbBookmarkTimeStamp as 'timestamp',
+        usbDateAddedToQueue as 'queue_date',
+        usbIsPlayed as 'played',
+        usbDatePlayed as 'date_played',
+        usbIsDownloaded as 'downloaded',
+        usbDateDownloaded as 'date_downloaded'
     FROM userShiurBookmarks
     WHERE usbUserKey IS NOT NULL
         AND usbBookmarkType IN ('history','isPlayed','lastPlayed','queue')
-"""
+    """
         usb_chunks = pd.read_sql_query(query_usb, self.conn, chunksize=self.chunk_size)
         df_usb = pd.concat(usb_chunks)
 
-        return df_usb.sort_values(by='User', ascending=True)
+        return df_usb.sort_values(by='user', ascending=True)
 
     def get_shiurim_df(self):
         # Merge with categories
