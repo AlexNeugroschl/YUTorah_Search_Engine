@@ -1,9 +1,9 @@
 import pandas as pd
-import sqlite3
+from db_connection import db_connection
 
 class ETL:
-    def __init__(self, db_path):
-        self.conn = sqlite3.connect(db_path)
+    def __init__(self):
+        self.conn = db_connection()
         self.chunk_size = 100000 # Adjust the chunk size as needed
 
     def get_favorites_df(self):
