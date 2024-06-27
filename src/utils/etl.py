@@ -43,13 +43,13 @@ class ETL:
 
     def get_shiurim_df(self):
         # Merge with categories
-        df_shiurim = pd.merge(self.get_shiurim_teachers(), self.get_cat(), on='shiur')
+        df_shiurim = pd.merge(self.__get_shiurim_teachers(), self.__get_cat(), on='shiur')
     
         # Merge with locations
-        df_shiurim = pd.merge(df_shiurim, self.get_locations(), on='loc_id')
+        df_shiurim = pd.merge(df_shiurim, self.__get_locations(), on='loc_id')
     
         # Merge with series
-        df_shiurim = pd.merge(df_shiurim, self.get_series(), on='series_id')
+        df_shiurim = pd.merge(df_shiurim, self.__get_series, on='series_id')
     
         # Drop unnecessary columns
         df_shiurim = df_shiurim.drop(columns=['loc_id', 'series_id'])
