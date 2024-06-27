@@ -49,7 +49,7 @@ class ETL:
         df_shiurim = pd.merge(df_shiurim, self.__get_locations(), on='loc_id')
     
         # Merge with series
-        df_shiurim = pd.merge(df_shiurim, self.__get_series, on='series_id')
+        df_shiurim = pd.merge(df_shiurim, self.__get_series(), on='series_id')
     
         # Drop unnecessary columns
         df_shiurim = df_shiurim.drop(columns=['loc_id', 'series_id'])
