@@ -7,9 +7,10 @@ This project is a recommendation engine for YU Torah, utilizing machine learning
 ## Project Structure
 
 - `main.py`: Entry point of the API.
+- `logging_config.py`: Basic logging configuration.
 - `routers/`: Contains FastAPI routers for different recommendation endpoints.
 - `models/`: Contains models for generating recommendations.
-- `utils/`: Contains queries and other useful util methods.
+- `pipeline/`: Contains the data pipeline for handling the YUTorah DB.
 - `tests/`: Contains tests for the application
 
 ## Coding Standards
