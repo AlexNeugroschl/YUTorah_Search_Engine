@@ -1,8 +1,9 @@
 import pandas as pd
-from db_connection import db_connection
+from src.utils.db_connection import db_connection
+
 
 class ETL:
-    def __init__(self, chunk_size:int = 100000):
+    def __init__(self, chunk_size: int = 100000):
         self.conn = db_connection()
         self.chunk_size = chunk_size
 
@@ -15,10 +16,11 @@ class ETL:
             ufDateAdded as 'date_favorite_added'
         FROM userFavorites
         """
-        fav_chunks = pd.read_sql_query(query_fav, self.conn, chunksize=self.chunk_size)
+        fav_chunks = pd.read_sql_query(
+            query_fav, self.conn, chunksize=self.chunk_size)
         df_fav = pd.concat(fav_chunks)
         return df_fav.sort_values(by='user', ascending=True)
-    
+
     def get_bookmakrs_df(self) -> pd.DataFrame:
         query_usb = """
     SELECT
@@ -36,26 +38,28 @@ class ETL:
     WHERE usbUserKey IS NOT NULL
         AND usbBookmarkType IN ('history','isPlayed','lastPlayed','queue')
     """
-        usb_chunks = pd.read_sql_query(query_usb, self.conn, chunksize=self.chunk_size)
+        usb_chunks = pd.read_sql_query(
+            query_usb, self.conn, chunksize=self.chunk_size)
         df_usb = pd.concat(usb_chunks)
 
         return df_usb.sort_values(by='user', ascending=True)
 
     def get_shiurim_df(self) -> pd.DataFrame:
         # Merge with categories
-        df_shiurim = pd.merge(self.__get_shiurim_teachers(), self.__get_cat(), on='shiur')
-    
+        df_shiurim = pd.merge(self.__get_shiurim_teachers(),
+                              self.__get_cat(), on='shiur')
+
         # Merge with locations
         df_shiurim = pd.merge(df_shiurim, self.__get_locations(), on='loc_id')
-    
+
         # Merge with series
         df_shiurim = pd.merge(df_shiurim, self.__get_series(), on='series_id')
-    
+
         # Drop unnecessary columns
         df_shiurim = df_shiurim.drop(columns=['loc_id', 'series_id'])
-    
+
         return df_shiurim
-    
+
     def __get_shiurim_teachers(self) -> pd.DataFrame:
         # Query for shiurim and teachers
         query_shiurim = """
@@ -81,7 +85,7 @@ class ETL:
             t.teacherIsHidden = 0 AND s.shiurIsVisibleOnYuTorah = 1
         """
         return pd.read_sql_query(query_shiurim, self.conn)
-    
+
     def __get_cat(self) -> pd.DataFrame:
         # Query for categories and subcategories
         query_cat = """
@@ -98,7 +102,7 @@ class ETL:
             categories c ON s.subcategoryCategoryKey = c.categoryID 
         """
         return pd.read_sql_query(query_cat, self.conn)
-    
+
     def __get_locations(self) -> pd.DataFrame:
         # Query for locations
         query_loc = """
@@ -110,7 +114,7 @@ class ETL:
             locations
         """
         return pd.read_sql_query(query_loc, self.conn)
-    
+
     def __get_series(self) -> pd.DataFrame:
         # Query for series
         query_series = """
@@ -122,7 +126,3 @@ class ETL:
             series
         """
         return pd.read_sql_query(query_series, self.conn)
-
-
-
-
