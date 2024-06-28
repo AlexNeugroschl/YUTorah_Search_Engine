@@ -1,13 +1,18 @@
 import pandas as pd
-from src.utils.db_connection import db_connection
+from src.pipeline.db_connection import db_connection
+from src.logging_config import setup_logging
+
+logger = setup_logging()
 
 
 class ETL:
     def __init__(self, chunk_size: int = 100000):
         self.conn = db_connection()
         self.chunk_size = chunk_size
+        logger.info("ETL instance created")
 
     def get_favorites_df(self) -> pd.DataFrame:
+        logger.info("START: Favorites Query")
         query_fav = """
         SELECT 
             ufUserKey as 'user',
@@ -15,13 +20,17 @@ class ETL:
             ufType as 'favorite_type',
             ufDateAdded as 'date_favorite_added'
         FROM userFavorites
+        ORDER BY date_favorite_added DESC
         """
         fav_chunks = pd.read_sql_query(
             query_fav, self.conn, chunksize=self.chunk_size)
         df_fav = pd.concat(fav_chunks)
-        return df_fav.sort_values(by='user', ascending=True)
+        df_fav = df_fav.sort_values(by='user', ascending=True)
+        logger.info("END: Favorites Query")
+        return df_fav
 
-    def get_bookmakrs_df(self) -> pd.DataFrame:
+    def get_bookmarks_df(self) -> pd.DataFrame:
+        logger.info("START: Bookmarks Query")
         query_usb = """
     SELECT
         usbUserKey as 'user',
@@ -37,27 +46,33 @@ class ETL:
     FROM userShiurBookmarks
     WHERE usbUserKey IS NOT NULL
         AND usbBookmarkType IN ('history','isPlayed','lastPlayed','queue')
+    ORDER BY shiur DESC
     """
         usb_chunks = pd.read_sql_query(
             query_usb, self.conn, chunksize=self.chunk_size)
         df_usb = pd.concat(usb_chunks)
-
-        return df_usb.sort_values(by='user', ascending=True)
+        df_usb = df_usb.sort_values(by='user', ascending=True)
+        logger.info("END: Favorites Query")
+        return df_usb
 
     def get_shiurim_df(self) -> pd.DataFrame:
+        logger.info("START: Shiurim Query")
         # Merge with categories
         df_shiurim = pd.merge(self.__get_shiurim_teachers(),
                               self.__get_cat(), on='shiur')
 
         # Merge with locations
-        df_shiurim = pd.merge(df_shiurim, self.__get_locations(), on='loc_id')
+        df_shiurim = pd.merge(
+            df_shiurim, self.__get_locations(), on='loc_id', how='left')
 
         # Merge with series
-        df_shiurim = pd.merge(df_shiurim, self.__get_series(), on='series_id')
+        df_shiurim = pd.merge(
+            df_shiurim, self.__get_series(), on='series_id', how='left')
 
         # Drop unnecessary columns
         df_shiurim = df_shiurim.drop(columns=['loc_id', 'series_id'])
-
+        df_shiurim.sort_values("shiur", ascending=False)
+        logger.info("END: Shiurim Query")
         return df_shiurim
 
     def __get_shiurim_teachers(self) -> pd.DataFrame:
