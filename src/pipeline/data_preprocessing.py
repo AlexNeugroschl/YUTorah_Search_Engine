@@ -11,6 +11,7 @@ class DataPreprocessing:
         self.df_shiurim = df_shiurim
         self.df_bookmarks = df_bookmarks
         self.df_favorites = df_favorites
+        self.df_categories = None
         logger.info("DataPreprocessing instance created")
 
     def preprocess(self) -> pd.DataFrame:
@@ -24,7 +25,7 @@ class DataPreprocessing:
         self.__clean_favorite_data()
 
         logger.info("FINISHED: Cleaning Data")
-        return self.df_shiurim, self.df_bookmarks, self.df_favorites
+        return self.df_shiurim, self.df_bookmarks, self.df_favorites, self.df_categories
 
     def __clean_text(self, text: str) -> str:
         if pd.isna(text):
@@ -39,6 +40,9 @@ class DataPreprocessing:
         # Subset specifies which fields can't be NaN
         self.df_shiurim.dropna(
             subset=['shiur', 'title', 'last_name', 'date', 'duration'], inplace=True)
+
+        # Creates one hot encoding table for shiur and all categories
+        self.__one_hot_cat()
         # This should be switched after mvp, for now we will remove duplicates from mult teachers/categories
         self.df_shiurim.drop_duplicates(subset=['shiur'], inplace=True)
 
@@ -79,6 +83,23 @@ class DataPreprocessing:
         self.df_favorites.drop_duplicates(inplace=True)
         self.df_favorites['user'] = self.df_favorites['user'].astype(int)
 
+    def __one_hot_cat(self) -> None:
+        df_categories = self.df_shiurim[[
+            'shiur', 'category', 'middle_category', 'subcategory']].set_index('shiur')
+
+        # One-hot encode 'category', 'middle_category', and 'subcategory' and combine them
+        df_combined = pd.get_dummies(df_categories, columns=['category', 'middle_category', 'subcategory'],
+                                     prefix=['category', 'middle_category', 'subcategory'], prefix_sep='_').astype(int)
+
+        # Perform bitwise OR to combine the one-hot vectors for each 'shiur'
+        df_combined_agg = df_combined.groupby('shiur').max()
+
+        # Ensure values are 0 and 1 (not True/False)
+        df_combined_agg = df_combined_agg.astype(int)
+
+        # Sort by 'shiur' in descending order
+        self.df_categories = df_combined_agg.sort_index(ascending=False)
+
 
 if __name__ == "__main__":
     from src.pipeline.etl import ETL
@@ -89,13 +110,11 @@ if __name__ == "__main__":
     df_favorites: pd.DataFrame = etl.get_favorites_df()
 
     preprocessor = DataPreprocessing(df_shiurim, df_bookmarks, df_favorites)
-    df_shiurim, df_bookmarks, df_favorites = preprocessor.preprocess()
+    df_shiurim, df_bookmarks, df_favorites, df_categories = preprocessor.preprocess()
 
     conn = db_connection()
 
-    df_shiurim.to_sql("shiurim_clean", conn)
-    df_bookmarks.to_sql("bookmarks_clean", conn)
-    df_favorites.to_sql("favorites_clean", conn)
     df_shiurim.to_csv("shiurim.csv")
     df_bookmarks.to_csv("bookmarks.csv")
     df_favorites.to_csv("favorites.csv")
+    df_categories.to_csv("categories.csv")
