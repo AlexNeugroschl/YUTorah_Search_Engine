@@ -76,6 +76,14 @@ class DataPreprocessing:
             subset=['user', 'shiur', 'session'], inplace=True)
         self.df_bookmarks.drop_duplicates(inplace=True)
         self.df_bookmarks['user'] = self.df_bookmarks['user'].astype(int)
+        self.df_bookmarks['timestamp'] = self.df_bookmarks['timestamp'].fillna(
+            0)
+
+        merged_df = self.df_bookmarks.merge(
+            self.df_shiurim[['shiur', 'duration']], how="inner", on='shiur')
+        self.df_bookmarks['duration'] = merged_df['duration']
+        self.df_bookmarks['listen_percentage'] = (
+            merged_df['timestamp'] / merged_df['duration']).fillna(0)
 
     def __clean_favorite_data(self) -> None:
         # No subset, all fields needed
@@ -92,13 +100,8 @@ class DataPreprocessing:
                                      prefix=['category', 'middle_category', 'subcategory'], prefix_sep='_').astype(int)
 
         # Perform bitwise OR to combine the one-hot vectors for each 'shiur'
-        df_combined_agg = df_combined.groupby('shiur').max()
-
-        # Ensure values are 0 and 1 (not True/False)
-        df_combined_agg = df_combined_agg.astype(int)
-
-        # Sort by 'shiur' in descending order
-        self.df_categories = df_combined_agg.sort_index(ascending=False)
+        self.df_categories = df_combined.groupby(
+            'shiur').max().astype(int).sort_index(ascending=False)
 
 
 if __name__ == "__main__":
