@@ -2,11 +2,11 @@ import pandas as pd
 from db_connection import db_connection
 
 class ETL:
-    def __init__(self):
+    def __init__(self, chunk_size:int = 100000):
         self.conn = db_connection()
-        self.chunk_size = 100000 # Adjust the chunk size as needed
+        self.chunk_size = chunk_size
 
-    def get_favorites_df(self):
+    def get_favorites_df(self) -> pd.DataFrame:
         query_fav = """
         SELECT 
             ufUserKey as 'user',
@@ -19,7 +19,7 @@ class ETL:
         df_fav = pd.concat(fav_chunks)
         return df_fav.sort_values(by='user', ascending=True)
     
-    def get_bookmakrs_df(self):
+    def get_bookmakrs_df(self) -> pd.DataFrame:
         query_usb = """
     SELECT
         usbUserKey as 'user',
@@ -41,7 +41,7 @@ class ETL:
 
         return df_usb.sort_values(by='user', ascending=True)
 
-    def get_shiurim_df(self):
+    def get_shiurim_df(self) -> pd.DataFrame:
         # Merge with categories
         df_shiurim = pd.merge(self.get_shiurim_teachers(), self.get_cat(), on='shiur')
     
@@ -56,7 +56,7 @@ class ETL:
     
         return df_shiurim
     
-    def __get_shiurim_teachers(self):
+    def __get_shiurim_teachers(self) -> pd.DataFrame:
         # Query for shiurim and teachers
         query_shiurim = """
         SELECT 
@@ -82,7 +82,7 @@ class ETL:
         """
         return pd.read_sql_query(query_shiurim, self.conn)
     
-    def __get_cat(self):
+    def __get_cat(self) -> pd.DataFrame:
         # Query for categories and subcategories
         query_cat = """
         SELECT 
@@ -99,7 +99,7 @@ class ETL:
         """
         return pd.read_sql_query(query_cat, self.conn)
     
-    def __get_locations(self):
+    def __get_locations(self) -> pd.DataFrame:
         # Query for locations
         query_loc = """
         SELECT 
@@ -111,7 +111,7 @@ class ETL:
         """
         return pd.read_sql_query(query_loc, self.conn)
     
-    def __get_series(self):
+    def __get_series(self) -> pd.DataFrame:
         # Query for series
         query_series = """
         SELECT 
