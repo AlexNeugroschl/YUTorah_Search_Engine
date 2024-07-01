@@ -1,8 +1,7 @@
 from typing import List, Dict
-from pydantic import BaseModel as PyBaseModel
 
 
-class BaseModel(PyBaseModel):
+class BaseModel():
     # List of shiurIDs
     def get_recommendations(self, user_id: str = None, *args, **kwargs) -> List[int]:
         raise NotImplementedError(
