@@ -11,7 +11,8 @@ class DataPreprocessing:
         self.df_shiurim = df_shiurim
         self.df_bookmarks = df_bookmarks
         self.df_favorites = df_favorites
-        self.df_categories = None
+        # One hot encoded matrix for all shiurim and their categories
+        self.df_categories: pd.DataFrame = None
         logger.info("DataPreprocessing instance created")
 
     def preprocess(self) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
