@@ -32,7 +32,7 @@ class DataPreprocessing:
 
         return self.df_shiurim, self.df_bookmarks, self.df_favorites, self.df_categories
 
-    def __clean_shiur_data(self) -> None:
+    def __clean_shiur_data(self):
         # Subset specifies which fields can't be NaN
         self.df_shiurim.dropna(
             subset=['shiur', 'title', 'last_name', 'date', 'duration'], inplace=True)
@@ -60,7 +60,7 @@ class DataPreprocessing:
             axis=1
         )
 
-    def __clean_bookmark_data(self) -> None:
+    def __clean_bookmark_data(self):
         self.df_bookmarks.dropna(
             subset=['user', 'shiur', 'session', 'duration'], inplace=True)
 
@@ -76,7 +76,7 @@ class DataPreprocessing:
 
         self.__listen_percentage_chunks()
 
-    def __listen_percentage_chunks(self, chunk_size: int = 500_000) -> None:
+    def __listen_percentage_chunks(self, chunk_size: int = 500_000):
         num_chunks = max(1, len(self.df_bookmarks) // chunk_size + 1)
         listen_percentage = []
 
@@ -96,13 +96,13 @@ class DataPreprocessing:
         self.df_bookmarks['listen_percentage'] = np.concatenate(
             listen_percentage)
 
-    def __clean_favorite_data(self) -> None:
+    def __clean_favorite_data(self):
         # No subset, all fields needed
         self.df_favorites.dropna(inplace=True)
         self.df_favorites.drop_duplicates(inplace=True)
         self.df_favorites['user'] = self.df_favorites['user'].astype(int)
 
-    def __one_hot_cat(self) -> None:
+    def __one_hot_cat(self):
         df_categories = self.df_shiurim[[
             'shiur', 'category', 'middle_category', 'subcategory']].set_index('shiur')
 

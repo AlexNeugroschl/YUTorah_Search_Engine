@@ -2,17 +2,26 @@ import pandas as pd
 from .db_connection import db_connection
 from ..logging_config import setup_logging
 import time
+from enum import Enum
 
 logger = setup_logging()
+
+
+class CleanedData(Enum):
+    SHIURIM = "shiurim_cleaned"
+    BOOKMARKS = "bookmarks_cleaned"
+    FAVORITES = "favorites_cleaned"
+    CATEGORIES = "categories_cleaned"
 
 
 class DataProcessor:
     def __init__(self):
         self.db = db_connection()
 
-    def load_df_csv(self, table: str) -> pd.DataFrame:
-        logger.info(f"Loading data from: {table}.csv")
-        return pd.read_csv(f"{table}.csv")
+    def load_table(self, table_name: str) -> pd.DataFrame:
+        logger.info(f"Loading data from: {table_name}")
+        query = f"SELECT * FROM {table_name}"
+        return pd.read_sql(query, con=self.db)
 
     def load_query(self, query: str) -> pd.DataFrame:
         logger.info(f"Loading data with query: {query}")
@@ -24,8 +33,8 @@ class DataProcessor:
         logger.info(f"Data saved to {table_name} table")
 
     def run_pipeline(self):
-        from src.pipeline.etl import ETL
-        from src.pipeline.data_preprocessing import DataPreprocessing
+        from .etl import ETL
+        from .data_preprocessing import DataPreprocessing
 
         etl = ETL()
         df_shiurim: pd.DataFrame = etl.get_shiurim_df()
@@ -36,14 +45,14 @@ class DataProcessor:
             df_shiurim, df_bookmarks, df_favorites)
         df_shiurim, df_bookmarks, df_favorites, df_categories = preprocessor.preprocess()
 
-        df_shiurim.to_csv("shiurim_cleaned.csv")
-        df_bookmarks.to_csv("bookmarks_cleaned.csv")
-        df_favorites.to_csv("favorites_cleaned.csv")
-        df_categories.to_csv("categories_cleaned.csv")
-        self.save_to_db(df_shiurim, 'shiurim_cleaned')
-        self.save_to_db(df_bookmarks, 'bookmarks_cleaned')
-        self.save_to_db(df_favorites, 'favorites_cleaned')
-        self.save_to_db(df_categories, 'categories_cleaned')
+        df_shiurim.to_csv(f"{CleanedData.SHIURIM}.csv")
+        df_bookmarks.to_csv(f"{CleanedData.BOOKMARKS}.csv")
+        df_favorites.to_csv(f"{CleanedData.FAVORITES}.csv")
+        df_categories.to_csv(f"{CleanedData.CATEGORIES}.csv")
+        self.save_to_db(df_shiurim, CleanedData.SHIURIM)
+        self.save_to_db(df_bookmarks, CleanedData.BOOKMARKS)
+        self.save_to_db(df_favorites, CleanedData.FAVORITES)
+        self.save_to_db(df_categories, CleanedData.CATEGORIES)
 
 
 if __name__ == "__main__":
