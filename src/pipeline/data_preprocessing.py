@@ -1,7 +1,7 @@
 import pandas as pd
 from src.logging_config import setup_logging
+from typing import Tuple
 from datetime import timedelta
-from src.pipeline.db_connection import db_connection
 
 logger = setup_logging()
 
@@ -14,14 +14,14 @@ class DataPreprocessing:
         self.df_categories = None
         logger.info("DataPreprocessing instance created")
 
-    def preprocess(self) -> pd.DataFrame:
+    def preprocess(self) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
         return self.__clean_data()
 
-    def __clean_data(self) -> pd.DataFrame:
+    def __clean_data(self) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
         logger.info("START: Cleaning Data")
 
         self.__clean_shiur_data()
-        self.__clean_boomark_data()
+        self.__clean_bookmark_data()
         self.__clean_favorite_data()
 
         logger.info("FINISHED: Cleaning Data")
@@ -30,11 +30,7 @@ class DataPreprocessing:
     def __clean_text(self, text: str) -> str:
         if pd.isna(text):
             return ''
-        # Remove leading/trailing whitespaces
-        text = text.strip()
-        # Remove special characters
-        text = ''.join(e for e in text if e.isalnum() or e.isspace())
-        return text
+        return ''.join(e for e in text.strip() if e.isalnum() or e.isspace())
 
     def __clean_shiur_data(self) -> None:
         # Subset specifies which fields can't be NaN
@@ -43,6 +39,7 @@ class DataPreprocessing:
 
         # Creates one hot encoding table for shiur and all categories
         self.__one_hot_cat()
+
         # This should be switched after mvp, for now we will remove duplicates from mult teachers/categories
         self.df_shiurim.drop_duplicates(subset=['shiur'], inplace=True)
 
@@ -53,16 +50,8 @@ class DataPreprocessing:
             self.df_shiurim[col] = self.df_shiurim[col].apply(
                 self.__clean_text)
 
-        def convert_duration_to_seconds(duration_str):
-            duration_datetime = pd.to_datetime(duration_str)
-            duration_timedelta = timedelta(hours=duration_datetime.hour,
-                                           minutes=duration_datetime.minute,
-                                           seconds=duration_datetime.second,
-                                           microseconds=duration_datetime.microsecond)
-            return duration_timedelta.total_seconds()
-
         self.df_shiurim['duration'] = self.df_shiurim['duration'].apply(
-            convert_duration_to_seconds)
+            self.__convert_duration_to_seconds)
 
         # This will be adjusted depending on needs during final iteration of content filtering
         self.df_shiurim['full_details'] = self.df_shiurim.apply(
@@ -71,19 +60,30 @@ class DataPreprocessing:
             axis=1
         )
 
-    def __clean_boomark_data(self) -> None:
+    def __convert_duration_to_seconds(self, duration_str: str) -> float:
+        duration_datetime = pd.to_datetime(duration_str)
+        duration_timedelta = timedelta(hours=duration_datetime.hour,
+                                       minutes=duration_datetime.minute,
+                                       seconds=duration_datetime.second,
+                                       microseconds=duration_datetime.microsecond)
+        return duration_timedelta.total_seconds()
+
+    def __clean_bookmark_data(self) -> None:
         self.df_bookmarks.dropna(
-            subset=['user', 'shiur', 'session'], inplace=True)
+            subset=['user', 'shiur', 'session', 'duration'], inplace=True)
+
         self.df_bookmarks.drop_duplicates(inplace=True)
+
         self.df_bookmarks['user'] = self.df_bookmarks['user'].astype(int)
+
         self.df_bookmarks['timestamp'] = self.df_bookmarks['timestamp'].fillna(
             0)
 
-        merged_df = self.df_bookmarks.merge(
-            self.df_shiurim[['shiur', 'duration']], how="inner", on='shiur')
-        self.df_bookmarks['duration'] = merged_df['duration']
-        self.df_bookmarks['listen_percentage'] = (
-            merged_df['timestamp'] / merged_df['duration']).fillna(0)
+        self.df_bookmarks['duration'] = self.df_bookmarks['duration'].apply(
+            self.__convert_duration_to_seconds)
+
+        self.df_bookmarks['listen_percentage'] = self.df_bookmarks.apply(
+            lambda row: round(row['timestamp'] / row['duration'], 3) if row['duration'] != 0 else 0, axis=1)
 
     def __clean_favorite_data(self) -> None:
         # No subset, all fields needed
@@ -114,8 +114,6 @@ if __name__ == "__main__":
 
     preprocessor = DataPreprocessing(df_shiurim, df_bookmarks, df_favorites)
     df_shiurim, df_bookmarks, df_favorites, df_categories = preprocessor.preprocess()
-
-    conn = db_connection()
 
     df_shiurim.to_csv("shiurim.csv")
     df_bookmarks.to_csv("bookmarks.csv")
