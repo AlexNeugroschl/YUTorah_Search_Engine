@@ -1,19 +1,17 @@
-import sys
 import os
-current_dir = os.path.dirname(__file__)
-src_dir = os.path.abspath(os.path.join(current_dir, '..', '..'))
-sys.path.append(src_dir)
 from src.pipeline.etl import ETL
 from fastai.vision.all import *
 from fastai.collab import *
 from typing import Dict, List
+from .base import BaseModel
 
 
-class UserCollabFilteringV1:
+class UserCollabFilteringV1(BaseModel):
     def __init__(self):
-        model_path = "Torah-Navigator/src/models/saved_models/user_collab_filtering_v1.pkl"
-        if os.path.exists(model_path):
-            self.learn = load_learner(model_path)
+        super().__init__()
+        self.model_path = "./saved_models/user_collab_filtering_v1.pkl"
+        if os.path.exists(self.model_path):
+            self.learn = load_learner(self.model_path)
         else:
             self.learn = self.retrain_model()
     
@@ -24,7 +22,7 @@ class UserCollabFilteringV1:
         dls = CollabDataLoaders.from_df(df, user_name='user', item_name='shiur', rating_name='rating', bs=64)
         learn = collab_learner(dls, n_factors=5, y_range=(0, 1), loss_func=BCEWithLogitsLossFlat())
         learn.fit_one_cycle(15, 5e-3)
-        learn.export("Torah-Navigator/src/models/saved_models/user_collab_filtering_v1.pkl")
+        learn.export(self.model_path)
         return learn
 
     def get_recommendations(self, user_id: str = None, *args, **kwargs) -> List[int]:
@@ -81,4 +79,4 @@ class UserCollabFilteringV1:
         item_biases = self.learn.model.i_bias.weight
         item_idx = self.learn.dls.classes['user'].o2i[shiur_id]
         return item_biases[item_idx]
-    
+
