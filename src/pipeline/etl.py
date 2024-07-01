@@ -42,8 +42,10 @@ class ETL:
         usbIsPlayed as 'played',
         usbDatePlayed as 'date_played',
         usbIsDownloaded as 'downloaded',
-        usbDateDownloaded as 'date_downloaded'
-    FROM userShiurBookmarks
+        usbDateDownloaded as 'date_downloaded',
+        s.shiurMediaLength as 'duration'
+    FROM userShiurBookmarks usb
+    JOIN shiurim s ON s.shiurID = usb.usbShiurKey 
     WHERE usbUserKey IS NOT NULL
         AND usbBookmarkType IN ('history','isPlayed','lastPlayed','queue')
     ORDER BY shiur DESC
