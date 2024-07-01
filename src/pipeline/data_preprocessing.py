@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 from src.logging_config import setup_logging
 from typing import Tuple
 from datetime import timedelta
@@ -19,19 +20,18 @@ class DataPreprocessing:
         return self.__clean_data()
 
     def __clean_data(self) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-        logger.info("START: Cleaning Data")
+        data_cleaning_methods = {
+            "Shiur Data": self.__clean_shiur_data,
+            "Bookmark Data": self.__clean_bookmark_data,
+            "Favorite Data": self.__clean_favorite_data
+        }
 
-        self.__clean_shiur_data()
-        self.__clean_bookmark_data()
-        self.__clean_favorite_data()
+        for data_name, cleaning_method in data_cleaning_methods.items():
+            logger.info(f"START: Cleaning {data_name}")
+            cleaning_method()
+            logger.info(f"FINISH: Cleaning {data_name}")
 
-        logger.info("FINISHED: Cleaning Data")
         return self.df_shiurim, self.df_bookmarks, self.df_favorites, self.df_categories
-
-    def __clean_text(self, text: str) -> str:
-        if pd.isna(text):
-            return ''
-        return ''.join(e for e in text.strip() if e.isalnum() or e.isspace())
 
     def __clean_shiur_data(self) -> None:
         # Subset specifies which fields can't be NaN
@@ -51,8 +51,8 @@ class DataPreprocessing:
             self.df_shiurim[col] = self.df_shiurim[col].apply(
                 self.__clean_text)
 
-        self.df_shiurim['duration'] = self.df_shiurim['duration'].apply(
-            self.__convert_duration_to_seconds)
+        self.df_shiurim['duration'] = self.__convert_duration_to_seconds(
+            self.df_shiurim['duration'])
 
         # This will be adjusted depending on needs during final iteration of content filtering
         self.df_shiurim['full_details'] = self.df_shiurim.apply(
@@ -60,14 +60,6 @@ class DataPreprocessing:
                 row['last_name']} Category {row['category']}",
             axis=1
         )
-
-    def __convert_duration_to_seconds(self, duration_str: str) -> float:
-        duration_datetime = pd.to_datetime(duration_str)
-        duration_timedelta = timedelta(hours=duration_datetime.hour,
-                                       minutes=duration_datetime.minute,
-                                       seconds=duration_datetime.second,
-                                       microseconds=duration_datetime.microsecond)
-        return duration_timedelta.total_seconds()
 
     def __clean_bookmark_data(self) -> None:
         self.df_bookmarks.dropna(
@@ -80,11 +72,30 @@ class DataPreprocessing:
         self.df_bookmarks['timestamp'] = self.df_bookmarks['timestamp'].fillna(
             0)
 
-        self.df_bookmarks['duration'] = self.df_bookmarks['duration'].apply(
-            self.__convert_duration_to_seconds)
+        self.df_bookmarks['duration'] = self.__convert_duration_to_seconds(
+            self.df_bookmarks['duration'])
 
-        self.df_bookmarks['listen_percentage'] = self.df_bookmarks.apply(
-            lambda row: round(row['timestamp'] / row['duration'], 3) if row['duration'] != 0 else 0, axis=1)
+        self.__listen_percentage_chunks()
+
+    def __listen_percentage_chunks(self, chunk_size: int = 500_000) -> None:
+        num_chunks = max(1, len(self.df_bookmarks) // chunk_size + 1)
+        listen_percentage = []
+
+        for i in range(num_chunks):
+            chunk = self.df_bookmarks.iloc[i * chunk_size:(i + 1) * chunk_size]
+
+            chunk_listen_percentage = np.where(
+                chunk['duration'] != 0,
+                chunk['timestamp'] / chunk['duration'],
+                0
+            )
+
+            chunk_listen_percentage = np.round(chunk_listen_percentage, 3)
+
+            listen_percentage.append(chunk_listen_percentage)
+
+        self.df_bookmarks['listen_percentage'] = np.concatenate(
+            listen_percentage)
 
     def __clean_favorite_data(self) -> None:
         # No subset, all fields needed
@@ -101,8 +112,37 @@ class DataPreprocessing:
                                      prefix=['category', 'middle_category', 'subcategory'], prefix_sep='_').astype(int)
 
         # Perform bitwise OR to combine the one-hot vectors for each 'shiur'
-        self.df_categories = df_combined.groupby(
+        df_combined = df_combined.groupby(
             'shiur').max().astype(int).sort_index(ascending=False)
+
+        column_sums = df_combined.sum(axis=0)
+        # All categories with less than 500 shiurim are grouped together to "Other"
+        columns_to_aggregate = column_sums[column_sums < 500].index
+        df_combined['Other'] = df_combined[columns_to_aggregate].max(axis=1)
+        df_combined.drop(columns=columns_to_aggregate, inplace=True)
+
+        self.df_categories = df_combined
+
+    def __clean_text(self, text: str) -> str:
+        if pd.isna(text):
+            return ''
+        return ''.join(e for e in text.strip() if e.isalnum() or e.isspace())
+
+    def __convert_duration_to_seconds(self, duration_series: pd.Series) -> pd.Series:
+        # Extract the time component from the datetime string
+        time_strs = duration_series.str.split().str[1]
+        # Split the time component into hours, minutes, seconds, and milliseconds
+        time_parts = time_strs.str.split(':', expand=True)
+        seconds_parts = time_parts[2].str.split('.', expand=True)
+        time_parts[2] = seconds_parts[0]
+
+        # Convert to total seconds
+        total_seconds = (
+            time_parts[0].astype(float) * 3600 +
+            time_parts[1].astype(float) * 60 +
+            time_parts[2].astype(float)
+        )
+        return total_seconds
 
 
 if __name__ == "__main__":
