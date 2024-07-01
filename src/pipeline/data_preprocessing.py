@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from src.logging_config import setup_logging
+from ..logging_config import setup_logging
 from typing import Tuple
 
 logger = setup_logging()
@@ -32,7 +32,7 @@ class DataPreprocessing:
 
         return self.df_shiurim, self.df_bookmarks, self.df_favorites, self.df_categories
 
-    def __clean_shiur_data(self) -> None:
+    def __clean_shiur_data(self):
         # Subset specifies which fields can't be NaN
         self.df_shiurim.dropna(
             subset=['shiur', 'title', 'last_name', 'date', 'duration'], inplace=True)
@@ -60,7 +60,7 @@ class DataPreprocessing:
             axis=1
         )
 
-    def __clean_bookmark_data(self) -> None:
+    def __clean_bookmark_data(self):
         self.df_bookmarks.dropna(
             subset=['user', 'shiur', 'session', 'duration'], inplace=True)
 
@@ -76,7 +76,7 @@ class DataPreprocessing:
 
         self.__listen_percentage_chunks()
 
-    def __listen_percentage_chunks(self, chunk_size: int = 500_000) -> None:
+    def __listen_percentage_chunks(self, chunk_size: int = 500_000):
         num_chunks = max(1, len(self.df_bookmarks) // chunk_size + 1)
         listen_percentage = []
 
@@ -96,13 +96,13 @@ class DataPreprocessing:
         self.df_bookmarks['listen_percentage'] = np.concatenate(
             listen_percentage)
 
-    def __clean_favorite_data(self) -> None:
+    def __clean_favorite_data(self):
         # No subset, all fields needed
         self.df_favorites.dropna(inplace=True)
         self.df_favorites.drop_duplicates(inplace=True)
         self.df_favorites['user'] = self.df_favorites['user'].astype(int)
 
-    def __one_hot_cat(self) -> None:
+    def __one_hot_cat(self):
         df_categories = self.df_shiurim[[
             'shiur', 'category', 'middle_category', 'subcategory']].set_index('shiur')
 
@@ -119,6 +119,16 @@ class DataPreprocessing:
         columns_to_aggregate = column_sums[column_sums < 500].index
         df_combined['Other'] = df_combined[columns_to_aggregate].max(axis=1)
         df_combined.drop(columns=columns_to_aggregate, inplace=True)
+
+        df_combined['subcategory_Bein Adam L\'Chaveiro'] = df_combined[[
+            'subcategory_Bein Adam L\'Chaveiro', 'subcategory_Bein Adam l\'Chaveiro']].max(axis=1)
+        df_combined.drop(
+            columns=['subcategory_Bein Adam l\'Chaveiro'], inplace=True)
+
+        df_combined['subcategory_Beit HaMikdash'] = df_combined[[
+            'subcategory_Beit HaMikdash', 'subcategory_Beit Hamikdash']].max(axis=1)
+        df_combined.drop(
+            columns=['subcategory_Beit Hamikdash'], inplace=True)
 
         self.df_categories = df_combined
 
@@ -142,20 +152,3 @@ class DataPreprocessing:
             time_parts[2].astype(float)
         )
         return total_seconds
-
-
-if __name__ == "__main__":
-    from src.pipeline.etl import ETL
-
-    etl = ETL()
-    df_shiurim: pd.DataFrame = etl.get_shiurim_df()
-    df_bookmarks: pd.DataFrame = etl.get_bookmarks_df()
-    df_favorites: pd.DataFrame = etl.get_favorites_df()
-
-    preprocessor = DataPreprocessing(df_shiurim, df_bookmarks, df_favorites)
-    df_shiurim, df_bookmarks, df_favorites, df_categories = preprocessor.preprocess()
-
-    df_shiurim.to_csv("shiurim.csv")
-    df_bookmarks.to_csv("bookmarks.csv")
-    df_favorites.to_csv("favorites.csv")
-    df_categories.to_csv("categories.csv")
