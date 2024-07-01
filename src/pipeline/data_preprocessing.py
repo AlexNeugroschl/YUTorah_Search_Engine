@@ -120,6 +120,7 @@ class DataPreprocessing:
         df_combined['Other'] = df_combined[columns_to_aggregate].max(axis=1)
         df_combined.drop(columns=columns_to_aggregate, inplace=True)
 
+        # These two categories were causing conflicts in DB so they are combined into one column each
         df_combined['subcategory_Bein Adam L\'Chaveiro'] = df_combined[[
             'subcategory_Bein Adam L\'Chaveiro', 'subcategory_Bein Adam l\'Chaveiro']].max(axis=1)
         df_combined.drop(

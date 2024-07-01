@@ -27,7 +27,7 @@ class DataProcessor:
         logger.info(f"Loading data with query: {query}")
         return pd.read_sql(query, con=self.db)
 
-    def save_to_db(self, df: pd.DataFrame, table_name: str):
+    def __save_to_db(self, df: pd.DataFrame, table_name: str):
         df.to_sql(table_name, con=self.db,
                   if_exists='replace', index=False)
         logger.info(f"Data saved to {table_name} table")
@@ -49,10 +49,10 @@ class DataProcessor:
         df_bookmarks.to_csv(f"{CleanedData.BOOKMARKS}.csv")
         df_favorites.to_csv(f"{CleanedData.FAVORITES}.csv")
         df_categories.to_csv(f"{CleanedData.CATEGORIES}.csv")
-        self.save_to_db(df_shiurim, CleanedData.SHIURIM)
-        self.save_to_db(df_bookmarks, CleanedData.BOOKMARKS)
-        self.save_to_db(df_favorites, CleanedData.FAVORITES)
-        self.save_to_db(df_categories, CleanedData.CATEGORIES)
+        self.__save_to_db(df_shiurim, CleanedData.SHIURIM)
+        self.__save_to_db(df_bookmarks, CleanedData.BOOKMARKS)
+        self.__save_to_db(df_favorites, CleanedData.FAVORITES)
+        self.__save_to_db(df_categories, CleanedData.CATEGORIES)
 
 
 if __name__ == "__main__":
