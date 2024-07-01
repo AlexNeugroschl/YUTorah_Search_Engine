@@ -2,7 +2,6 @@ import pandas as pd
 import numpy as np
 from src.logging_config import setup_logging
 from typing import Tuple
-from datetime import timedelta
 
 logger = setup_logging()
 
