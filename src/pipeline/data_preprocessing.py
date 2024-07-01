@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from src.logging_config import setup_logging
+from ..logging_config import setup_logging
 from typing import Tuple
 
 logger = setup_logging()
@@ -120,6 +120,16 @@ class DataPreprocessing:
         df_combined['Other'] = df_combined[columns_to_aggregate].max(axis=1)
         df_combined.drop(columns=columns_to_aggregate, inplace=True)
 
+        df_combined['subcategory_Bein Adam L\'Chaveiro'] = df_combined[[
+            'subcategory_Bein Adam L\'Chaveiro', 'subcategory_Bein Adam l\'Chaveiro']].max(axis=1)
+        df_combined.drop(
+            columns=['subcategory_Bein Adam l\'Chaveiro'], inplace=True)
+
+        df_combined['subcategory_Beit HaMikdash'] = df_combined[[
+            'subcategory_Beit HaMikdash', 'subcategory_Beit Hamikdash']].max(axis=1)
+        df_combined.drop(
+            columns=['subcategory_Beit Hamikdash'], inplace=True)
+
         self.df_categories = df_combined
 
     def __clean_text(self, text: str) -> str:
@@ -142,20 +152,3 @@ class DataPreprocessing:
             time_parts[2].astype(float)
         )
         return total_seconds
-
-
-if __name__ == "__main__":
-    from src.pipeline.etl import ETL
-
-    etl = ETL()
-    df_shiurim: pd.DataFrame = etl.get_shiurim_df()
-    df_bookmarks: pd.DataFrame = etl.get_bookmarks_df()
-    df_favorites: pd.DataFrame = etl.get_favorites_df()
-
-    preprocessor = DataPreprocessing(df_shiurim, df_bookmarks, df_favorites)
-    df_shiurim, df_bookmarks, df_favorites, df_categories = preprocessor.preprocess()
-
-    df_shiurim.to_csv("shiurim.csv")
-    df_bookmarks.to_csv("bookmarks.csv")
-    df_favorites.to_csv("favorites.csv")
-    df_categories.to_csv("categories.csv")

@@ -1,6 +1,6 @@
 import pandas as pd
 from src.pipeline.db_connection import db_connection
-from src.logging_config import setup_logging
+from ..logging_config import setup_logging
 
 logger = setup_logging()
 
