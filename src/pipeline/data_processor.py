@@ -18,13 +18,14 @@ class CleanedData(Enum):
 class DataProcessor:
     def __init__(self):
         self.db = db_connection()
+        logger.info("DataProcessor instance created")
 
     def load_table(self, table_name: str) -> pd.DataFrame:
         logger.info(f"Loading data from: {table_name.value}")
         query = f"SELECT * FROM {table_name.value}"
         return pd.read_sql(query, con=self.db)
 
-    def load_limit_table(self, table_name: str, entries: int = 100_000):
+    def load_limit_table(self, table_name: str, entries: int = 100_000) -> pd.DataFrame:
         logger.info(f"Loading {entries} entries from: {table_name.value}")
         query = f"SELECT * FROM {table_name.value} ORDER BY shiur DESC LIMIT {entries}"
         return pd.read_sql_query(query, con=self.db)

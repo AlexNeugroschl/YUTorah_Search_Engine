@@ -109,28 +109,31 @@ class DataPreprocessing:
         listens_df = self.__get_listens(shiur_stats_df)
         downloads_df = self.__get_downloads(shiur_stats_df)
         teacher_df = self.__get_top_teacher(shiur_stats_df)
-        self.user_stats_df = listens_df.merge(
+        self.df_user_stats = listens_df.merge(
             downloads_df, on='user').merge(teacher_df, on='user')
+        self.df_user_stats = self.df_user_stats[[
+            'total_listens', 'total_downloads', 'top_teacher']]
 
     def __get_top_teacher(self, shiur_stats_df: pd.DataFrame) -> pd.DataFrame:
-        merged_df = pd.merge(self.bookmark_df, self.shiurim_df, on='shiur')
+        merged_df = pd.merge(self.df_bookmarks, self.df_shiurim, on='shiur')
         merged_df['name'] = merged_df['teacher_title'] + ' ' + \
             merged_df['first_name'] + ' ' + merged_df['last_name']
         merged_df.drop(
             columns=['teacher_title', 'last_name', 'first_name'], inplace=True)
         most_common_name = merged_df.groupby(
             ['user'])['name'].agg(pd.Series.mode)
-        shiur_stats_df['top_teach'] = most_common_name
+        shiur_stats_df['top_teacher'] = most_common_name
         return shiur_stats_df
 
     def __get_downloads(self, shiur_stats_df: pd.DataFrame) -> pd.DataFrame:
-        downloads_df = self.bookmakrs_df[self.bookmakrs_df['downloaded'] == 1].groupby(
+        downloads_df = self.df_bookmarks[self.df_bookmarks['downloaded'] == 1].groupby(
             'user')
         shiur_stats_df['total_downloads'] = downloads_df['downloaded'].count()
+        shiur_stats_df['total_downloads'].fillna(0)
         return shiur_stats_df
 
     def __get_listens(self, shiur_stats_df: pd.DataFrame) -> pd.DataFrame:
-        listened_df = self.bookmarks_df[self.bookmarks_df['played'] == 1].groupby(
+        listened_df = self.df_bookmarks[self.df_bookmarks['played'] == 1].groupby(
             'user')
         shiur_stats_df['total_listens'] = listened_df['played'].count()
         return shiur_stats_df
