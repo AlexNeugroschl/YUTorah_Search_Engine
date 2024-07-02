@@ -12,6 +12,7 @@ class CleanedData(Enum):
     BOOKMARKS = "bookmarks_cleaned"
     FAVORITES = "favorites_cleaned"
     CATEGORIES = "categories_cleaned"
+    USER_STATS = "user_stats_cleaned"
 
 
 class DataProcessor:
@@ -48,16 +49,18 @@ class DataProcessor:
 
         preprocessor = DataPreprocessing(
             df_shiurim, df_bookmarks, df_favorites)
-        df_shiurim, df_bookmarks, df_favorites, df_categories = preprocessor.preprocess()
+        df_shiurim, df_bookmarks, df_favorites, df_categories, df_user_stats = preprocessor.preprocess()
 
         df_shiurim.to_csv(f"{CleanedData.SHIURIM.value}.csv")
         df_bookmarks.to_csv(f"{CleanedData.BOOKMARKS.value}.csv")
         df_favorites.to_csv(f"{CleanedData.FAVORITES.value}.csv")
         df_categories.to_csv(f"{CleanedData.CATEGORIES.value}.csv")
+        df_user_stats.to_csv(f"{CleanedData.USER_STATS.value}.csv")
         self.__save_to_db(df_shiurim, CleanedData.SHIURIM)
         self.__save_to_db(df_bookmarks, CleanedData.BOOKMARKS)
         self.__save_to_db(df_favorites, CleanedData.FAVORITES)
         self.__save_to_db(df_categories, CleanedData.CATEGORIES)
+        self.__save_to_db(df_user_stats, CleanedData.USER_STATS)
 
 
 if __name__ == "__main__":
