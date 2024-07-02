@@ -19,18 +19,23 @@ class DataProcessor:
         self.db = db_connection()
 
     def load_table(self, table_name: str) -> pd.DataFrame:
-        logger.info(f"Loading data from: {table_name}")
-        query = f"SELECT * FROM {table_name}"
+        logger.info(f"Loading data from: {table_name.value}")
+        query = f"SELECT * FROM {table_name.value}"
         return pd.read_sql(query, con=self.db)
+
+    def load_limit_table(self, table_name: str, entries: int = 100_000):
+        logger.info(f"Loading {entries} entries from: {table_name.value}")
+        query = f"SELECT * FROM {table_name.value} ORDER BY shiur DESC LIMIT {entries}"
+        return pd.read_sql_query(query, con=self.db)
 
     def load_query(self, query: str) -> pd.DataFrame:
         logger.info(f"Loading data with query: {query}")
         return pd.read_sql(query, con=self.db)
 
     def __save_to_db(self, df: pd.DataFrame, table_name: str):
-        df.to_sql(table_name, con=self.db,
+        df.to_sql(table_name.value, con=self.db,
                   if_exists='replace', index=False)
-        logger.info(f"Data saved to {table_name} table")
+        logger.info(f"Data saved to {table_name.value} table")
 
     def run_pipeline(self):
         from .etl import ETL
@@ -45,10 +50,10 @@ class DataProcessor:
             df_shiurim, df_bookmarks, df_favorites)
         df_shiurim, df_bookmarks, df_favorites, df_categories = preprocessor.preprocess()
 
-        df_shiurim.to_csv(f"{CleanedData.SHIURIM}.csv")
-        df_bookmarks.to_csv(f"{CleanedData.BOOKMARKS}.csv")
-        df_favorites.to_csv(f"{CleanedData.FAVORITES}.csv")
-        df_categories.to_csv(f"{CleanedData.CATEGORIES}.csv")
+        df_shiurim.to_csv(f"{CleanedData.SHIURIM.value}.csv")
+        df_bookmarks.to_csv(f"{CleanedData.BOOKMARKS.value}.csv")
+        df_favorites.to_csv(f"{CleanedData.FAVORITES.value}.csv")
+        df_categories.to_csv(f"{CleanedData.CATEGORIES.value}.csv")
         self.__save_to_db(df_shiurim, CleanedData.SHIURIM)
         self.__save_to_db(df_bookmarks, CleanedData.BOOKMARKS)
         self.__save_to_db(df_favorites, CleanedData.FAVORITES)
