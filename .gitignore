@@ -8,3 +8,5 @@ __pycache__/
 .env
 *.csv
 *.log
+*.npz
+*.model
