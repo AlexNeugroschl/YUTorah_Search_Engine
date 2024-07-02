@@ -123,13 +123,13 @@ class DataPreprocessing:
         shiur_stats_df['top_teach'] = most_common_name
         return shiur_stats_df
 
-    def __get_downloads(self, shiur_stats_df: pd.DataFrame):
+    def __get_downloads(self, shiur_stats_df: pd.DataFrame) -> pd.DataFrame:
         downloads_df = self.bookmakrs_df[self.bookmakrs_df['downloaded'] == 1].groupby(
             'user')
         shiur_stats_df['total_downloads'] = downloads_df['downloaded'].count()
         return shiur_stats_df
 
-    def __get_listens(self, shiur_stats_df: pd.DataFrame):
+    def __get_listens(self, shiur_stats_df: pd.DataFrame) -> pd.DataFrame:
         listened_df = self.bookmarks_df[self.bookmarks_df['played'] == 1].groupby(
             'user')
         shiur_stats_df['total_listens'] = listened_df['played'].count()

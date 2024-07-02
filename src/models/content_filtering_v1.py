@@ -1,5 +1,5 @@
 import os
-from typing import Dict, List
+from typing import Dict
 import numpy as np
 import pandas as pd
 from gensim.parsing.preprocessing import preprocess_string, strip_punctuation, remove_stopwords, strip_short
