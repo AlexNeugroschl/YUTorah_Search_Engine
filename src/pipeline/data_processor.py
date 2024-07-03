@@ -52,6 +52,8 @@ class DataProcessor:
             df_shiurim, df_bookmarks, df_favorites)
         df_shiurim, df_bookmarks, df_favorites, df_categories, df_user_stats = preprocessor.preprocess()
 
+        df_categories = df_categories.reset_index()
+
         df_shiurim.to_csv(f"{CleanedData.SHIURIM.value}.csv")
         df_bookmarks.to_csv(f"{CleanedData.BOOKMARKS.value}.csv")
         df_favorites.to_csv(f"{CleanedData.FAVORITES.value}.csv")

@@ -6,42 +6,49 @@ from gensim.parsing.preprocessing import preprocess_string, strip_punctuation, r
 from gensim.models import Word2Vec
 from sklearn.metrics.pairwise import cosine_similarity
 from scipy.sparse import lil_matrix, save_npz, load_npz
+from sklearn.cluster import KMeans
 from src.pipeline.data_processor import DataProcessor, CleanedData
 from .base import BaseModel
 from ..logging_config import setup_logging
 from ..decorators import log_and_time_execution
 
-
 logger = setup_logging()
 
 
 class ContentFiltering(BaseModel):
-    def __init__(self):
+    def __init__(self, k_clusters: int = 10):
         super().__init__()
         dp = DataProcessor()
-        self.df = dp.load_limit_table(CleanedData.SHIURIM, 70_000)
+        self.df = dp.load_table(CleanedData.SHIURIM)
+        self.cat_df = dp.load_table(CleanedData.CATEGORIES)
+        self.k_clusters = k_clusters
+        self.__merge_cluster_info()
 
-        self.model_path = "./saved_models/word2vec_titles_v1.model"
-        self.similarity_matrix_path = "./saved_models/shiur_similarity_matrix_v1.npz"
+        self.model_path = "./saved_models/content_filtering/word2vec_titles_v1.model"
+        self.similarity_matrix_directory = "./saved_models/content_filtering/sim_matrices"
+        self.similarity_matrix_path = "./saved_models/content_filtering/sim_matrices/sim_matrix_cluster_{}.npz"
 
-        if os.path.exists(self.similarity_matrix_path):
-            similarity_matrix = self.__load_similarity_matrix(
-                self.similarity_matrix_path)
-            self.similarity_df = self.__create_similarity_dataframe(
-                similarity_matrix)
-            logger.info("Loaded Similarity DataFrame")
+        self.similarity_matrices = {}
+
+        if not os.path.exists(self.similarity_matrix_directory):
+            os.makedirs(self.similarity_matrix_directory)
+
+        if os.path.exists(self.model_path):
+            self.model = Word2Vec.load(self.model_path)
+            logger.info("Loaded Word2Vec Model")
         else:
-            if os.path.exists(self.model_path):
-                self.model = Word2Vec.load(self.model_path)
-                logger.info("Loaded Word2Vec Model")
-            else:
-                self.model = self.__train_word2vec_model()
+            self.model = self.__train_word2vec_model()
 
-            similarity_matrix = self.__compute_similarity_matrix()
-            self.__save_similarity_matrix(
-                similarity_matrix, self.similarity_matrix_path)
-            self.similarity_df = self.__create_similarity_dataframe(
-                similarity_matrix)
+        for cluster_id in range(self.k_clusters):
+            path = self.similarity_matrix_path.format(cluster_id)
+            if os.path.exists(path):
+                similarity_matrix = self.__load_similarity_matrix(path)
+                self.similarity_matrices[cluster_id] = self.__create_similarity_dataframe(
+                    similarity_matrix, cluster_id)
+                logger.info(
+                    f"Loaded Similarity DataFrame for cluster {cluster_id}")
+            else:
+                self.__cluster_similarity_matrix(cluster_id)
 
     def get_recommendations(self, shiur_id: int, top_n: int = 5, *args, **kwargs) -> Dict[int, str]:
         recommendations = self.get_weighted_recommendations(shiur_id, top_n)
@@ -49,8 +56,10 @@ class ContentFiltering(BaseModel):
             'shiur').loc[recommendations.keys(), 'title']
         return {int(shiur_id): str(titles[shiur_id]) for shiur_id in recommendations.keys()}
 
-    def get_weighted_recommendations(self, shiur_id: str, top_n: int = 5, *args, **kwargs) -> Dict[int, float]:
-        similarity_scores = self.similarity_df.loc[shiur_id]
+    def get_weighted_recommendations(self, shiur_id: int, top_n: int = 5, *args, **kwargs) -> Dict[int, float]:
+        cluster_id = self.df.loc[self.df['shiur']
+                                 == shiur_id, 'Cluster'].values[0]
+        similarity_scores = self.similarity_matrices[cluster_id].loc[shiur_id]
         most_similar_ids = similarity_scores.sort_values(
             ascending=False).index[1:top_n + 1]
         most_similar_scores = similarity_scores.sort_values(
@@ -60,6 +69,22 @@ class ContentFiltering(BaseModel):
             most_similar_ids, most_similar_scores)}
 
         return recommendations
+
+    @log_and_time_execution
+    def __merge_cluster_info(self):
+        # self.cat_df = self.cat_df.reset_index()
+        if 'Cluster' not in self.cat_df.columns:
+            self.__cluster_shiurim()
+        self.df = self.df.merge(
+            self.cat_df[['shiur', 'Cluster']], on='shiur', how='left')
+
+    @log_and_time_execution
+    def __cluster_shiurim(self):
+        X = self.cat_df.iloc[:, 1:].values
+        kmeans = KMeans(n_clusters=self.k_clusters, random_state=42)
+        kmeans.fit(X)
+        labels = kmeans.labels_
+        self.cat_df['Cluster'] = labels
 
     @log_and_time_execution
     def __train_word2vec_model(self) -> Word2Vec:
@@ -96,11 +121,21 @@ class ContentFiltering(BaseModel):
         return np.mean(vectors, axis=0) if vectors else np.zeros(model.vector_size)
 
     @log_and_time_execution
-    def __compute_similarity_matrix(self, threshold=0.6, batch_size=1000):
-        n = len(self.df)
+    def __cluster_similarity_matrix(self, cluster_id):
+        cluster_df = self.df[self.df['Cluster'] == cluster_id]
+        similarity_matrix = self.__compute_similarity_matrix(cluster_df)
+        sim_matrix_path = self.similarity_matrix_path.format(cluster_id)
+        self.__save_similarity_matrix(similarity_matrix, sim_matrix_path)
+        self.similarity_matrices[cluster_id] = self.__create_similarity_dataframe(
+            similarity_matrix, cluster_id)
+        logger.info(
+            f"Saved and created Similarity DataFrame for cluster {cluster_id}")
+
+    def __compute_similarity_matrix(self, df: pd.DataFrame, threshold: float = 0.6, batch_size: int = 1500):
+        n = len(df)
         similarity_matrix = lil_matrix((n, n))  # Using a sparse matrix
 
-        vectors = np.stack(self.df['title'].apply(
+        vectors = np.stack(df['title'].apply(
             lambda x: self.__get_title_vector(x, self.model)).values)
 
         for i in range(0, n, batch_size):
@@ -121,10 +156,9 @@ class ContentFiltering(BaseModel):
 
         return similarity_matrix.tocsr()  # Convert to CSR format for efficient operations
 
-    @log_and_time_execution
-    def __create_similarity_dataframe(self, similarity_matrix, chunk_size=1000):
+    def __create_similarity_dataframe(self, similarity_matrix, cluster_id, chunk_size=1000):
         n = similarity_matrix.shape[0]
-        ids = self.df['shiur'].values
+        ids = self.df[self.df['Cluster'] == cluster_id]['shiur'].values
         chunks = []
 
         for start in range(0, n, chunk_size):
@@ -137,7 +171,6 @@ class ContentFiltering(BaseModel):
         similarity_df = pd.concat(chunks, axis=0)
         return similarity_df
 
-    @log_and_time_execution
     def __save_similarity_matrix(self, matrix, file_path):
         save_npz(file_path, matrix)
 
