@@ -57,8 +57,7 @@ class DataPreprocessing:
 
         # This will be adjusted depending on needs during final iteration of content filtering
         self.df_shiurim['full_details'] = self.df_shiurim.apply(
-            lambda row: f"Title {row['title']} Speaker {
-                row['last_name']} Category {row['category']}",
+            lambda row: f"Title {row['title']} Speaker {row['last_name']} Category {row['category']}",
             axis=1
         )
 
@@ -157,15 +156,16 @@ class DataPreprocessing:
         df_combined.drop(columns=columns_to_aggregate, inplace=True)
 
         # These two categories were causing conflicts in DB so they are combined into one column each
-        df_combined['subcategory_Bein Adam L\'Chaveiro'] = df_combined[[
-            'subcategory_Bein Adam L\'Chaveiro', 'subcategory_Bein Adam l\'Chaveiro']].max(axis=1)
-        df_combined.drop(
-            columns=['subcategory_Bein Adam l\'Chaveiro'], inplace=True)
-
-        df_combined['subcategory_Beit HaMikdash'] = df_combined[[
-            'subcategory_Beit HaMikdash', 'subcategory_Beit Hamikdash']].max(axis=1)
-        df_combined.drop(
-            columns=['subcategory_Beit Hamikdash'], inplace=True)
+        if 'subcategory_Bein Adam L\'Chaveiro' in df_combined.columns and 'subcategory_Bein Adam l\'Chaveiro' in df_combined.columns:
+            df_combined['subcategory_Bein Adam L\'Chaveiro'] = df_combined[[
+                'subcategory_Bein Adam L\'Chaveiro', 'subcategory_Bein Adam l\'Chaveiro']].max(axis=1)
+            df_combined.drop(
+                columns=['subcategory_Bein Adam l\'Chaveiro'], inplace=True)
+        if 'subcategory_Beit HaMikdash' in df_combined.columns and 'subcategory_Beit Hamikdash' in df_combined.columns:
+            df_combined['subcategory_Beit HaMikdash'] = df_combined[[
+                'subcategory_Beit HaMikdash', 'subcategory_Beit Hamikdash']].max(axis=1)
+            df_combined.drop(
+                columns=['subcategory_Beit Hamikdash'], inplace=True)
 
         self.df_categories = df_combined
 

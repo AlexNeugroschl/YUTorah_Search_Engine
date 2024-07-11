@@ -23,7 +23,7 @@ class ETL:
         ORDER BY date_favorite_added DESC
         """
         fav_chunks = pd.read_sql_query(
-            query_fav, self.conn, chunksize=self.chunk_size)
+            query_fav, self.conn, chunksize=self.chunk_size,parse_dates=['date_favorite_added'])
         df_fav = pd.concat(fav_chunks)
         df_fav = df_fav.sort_values(by='user', ascending=True)
         logger.info("END: Favorites Query")
@@ -51,7 +51,7 @@ class ETL:
     ORDER BY shiur DESC
     """
         usb_chunks = pd.read_sql_query(
-            query_usb, self.conn, chunksize=self.chunk_size)
+            query_usb, self.conn, chunksize=self.chunk_size,parse_dates=['date','queue_date','date_played','date_downloaded'])
         df_usb = pd.concat(usb_chunks)
         df_usb = df_usb.sort_values(by='user', ascending=True)
         logger.info("END: Favorites Query")
@@ -101,7 +101,7 @@ class ETL:
         WHERE 
             t.teacherIsHidden = 0 AND s.shiurIsVisibleOnYuTorah = 1
         """
-        return pd.read_sql_query(query_shiurim, self.conn)
+        return pd.read_sql_query(query_shiurim, self.conn,parse_dates=['date'])
 
     def __get_cat(self) -> pd.DataFrame:
         # Query for categories and subcategories

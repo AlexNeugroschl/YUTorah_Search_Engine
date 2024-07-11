@@ -23,12 +23,13 @@ class DataProcessor:
     def load_table(self, table_name: str) -> pd.DataFrame:
         logger.info(f"Loading data from: {table_name.value}")
         query = f"SELECT * FROM {table_name.value}"
-        return pd.read_sql(query, con=self.db)
+        return pd.read_sql(query, con=self.db,parse_dates=self.__get_date_columns(table_name))
 
     def load_limit_table(self, table_name: str, entries: int = 100_000) -> pd.DataFrame:
+        #Needs to be fixed - Categories,Favorites, And User Stats have no shiur to be ordered by
         logger.info(f"Loading {entries} entries from: {table_name.value}")
         query = f"SELECT * FROM {table_name.value} ORDER BY shiur DESC LIMIT {entries}"
-        return pd.read_sql_query(query, con=self.db)
+        return pd.read_sql_query(query, con=self.db,parse_dates=self.__get_date_columns(table_name))
 
     def load_query(self, query: str) -> pd.DataFrame:
         logger.info(f"Loading data with query: {query}")
@@ -38,6 +39,16 @@ class DataProcessor:
         df.to_sql(table_name.value, con=self.db,
                   if_exists='replace', index=False)
         logger.info(f"Data saved to {table_name.value} table")
+    
+    def __get_date_columns(self, table_name: str) -> list:
+        if table_name == CleanedData.SHIURIM:
+            return ['date']
+        elif table_name == CleanedData.BOOKMARKS:
+            return ['date_played', 'date_downloaded', 'queue_date']
+        elif table_name == CleanedData.FAVORITES:
+            return ['date_favorite_added']
+        else:
+            return []
 
     def run_pipeline(self):
         from .etl import ETL
