@@ -114,11 +114,11 @@ class ContentFiltering(BaseModel):
         custom_filters = [strip_punctuation, remove_stopwords, strip_short]
         return preprocess_string(lower_title, custom_filters)
 
-    def __get_title_vector(self, title, model):
+    def __get_title_vector(self, title):
         processed_title = self.__preprocess_title(title)
-        vectors = [model.wv[word]
-                   for word in processed_title if word in model.wv]
-        return np.mean(vectors, axis=0) if vectors else np.zeros(model.vector_size)
+        vectors = [self.model.wv[word]
+                   for word in processed_title if word in self.model.wv]
+        return np.mean(vectors, axis=0) if vectors else np.zeros(self.model.vector_size)
 
     @log_and_time_execution
     def __cluster_similarity_matrix(self, cluster_id):
