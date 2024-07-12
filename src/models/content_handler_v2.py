@@ -33,13 +33,16 @@ class Autoencoder(nn.Module):
 
 
 class ContentHandler:
-    def __init__(self, user_listens_df, n_clusters=10):
+    def __init__(self, user_listens_df=pd.DataFrame(), n_clusters=10):
         dp = DataProcessor()
         self.bookmarks_df = dp.load_table(CleanedData.BOOKMARKS)
         self.shiur_df = dp.load_table(CleanedData.SHIURIM)
         self.bookmarks_df = self.bookmarks_df.merge(self.shiur_df[['shiur', 'full_details']], on='shiur', how='inner')
 
         self.user_listens_df = user_listens_df
+        if self.user_listens_df.empty:
+            self.user_listens_df = self.bookmarks_df
+
         self.user_listens_df['date'] = self.user_listens_df['date_played'].combine_first(
             self.user_listens_df['queue_date'])
 
@@ -145,7 +148,9 @@ class ContentHandler:
             self.projected_shiur_embeddings['projected_embedding'].values)).flatten()
         similar_shiur_indices = similarities.argsort()[-top_n:][::-1][1:]
         similar_shiur_ids = self.projected_shiur_embeddings.iloc[similar_shiur_indices]['shiur'].values
-        return {int(shiur_id): self.bookmarks_df[self.bookmarks_df['shiur'] == shiur_id]['full_details'].values[0] for shiur_id in similar_shiur_ids if not self.bookmarks_df[self.bookmarks_df['shiur'] == shiur_id].empty}
+
+        recommendations = self.get_recommendations_from_ids(similar_shiur_ids)
+        return recommendations
 
     def recommend_for_user_content(self, user_id: int, top_n: int = 5) -> Dict[int, str]:
         user_embeddings_filtered = self.user_embeddings[self.user_embeddings['user'] == user_id]
@@ -179,8 +184,13 @@ class ContentHandler:
         similar_shiur_indices = similarities.argsort()[-top_n:][::-1]
         similar_shiur_ids = filtered_embeddings.iloc[similar_shiur_indices]['shiur'].values
 
+        recommendations = self.get_recommendations_from_ids(similar_shiur_ids)
+
+        return recommendations
+
+    def get_recommendations_from_ids(self, sim_ids):
         recommendations = {}
-        for shiur_id in similar_shiur_ids:
+        for shiur_id in sim_ids:
             shiur_details = self.bookmarks_df[self.bookmarks_df['shiur'] == shiur_id]['full_details']
             if not shiur_details.empty:
                 recommendations[int(shiur_id)] = shiur_details.values[0]

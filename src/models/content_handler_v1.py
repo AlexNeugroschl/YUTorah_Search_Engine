@@ -25,13 +25,16 @@ class Attention(nn.Module):
 
 
 class ContentHandler:
-    def __init__(self, user_listens_df):
+    def __init__(self, user_listens_df=pd.DataFrame()):
         dp = DataProcessor()
         self.bookmarks_df = dp.load_table(CleanedData.BOOKMARKS)
         self.shiur_df = dp.load_table(CleanedData.SHIURIM)
         self.bookmarks_df = self.bookmarks_df.merge(self.shiur_df[['shiur', 'full_details']], on='shiur', how='inner')
 
         self.user_listens_df = user_listens_df
+        if self.user_listens_df.empty:
+            self.user_listens_df = self.bookmarks_df
+
         self.user_listens_df['date'] = self.user_listens_df['date_played'].combine_first(
             self.user_listens_df['queue_date'])
 
