@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import pandas as pd
 from typing import Dict
@@ -48,7 +49,11 @@ class ContentHandler:
 
         self.model = Word2Vec.load("./saved_models/content_filtering/word2vec_titles_v1.model")
         self.shiur_embeddings = self.get_shiur_embeddings(self.shiur_df)
-        self.autoencoder = self.train_autoencoder()
+        self.model_path = "./saved_models/content_filtering/autoencoder.model"
+        if os.path.exists(self.model_path):
+            self.autoencoder = self.load_autoencoder()
+        else:
+            self.autoencoder = self.train_autoencoder()
         self.user_embeddings = self.get_user_embeddings()
         self.projected_shiur_embeddings = self.get_projected_shiur_embeddings()
 
@@ -116,6 +121,15 @@ class ContentHandler:
             if epoch % 10 == 0:
                 logger.info(f"Epoch {epoch}/{epochs}, Loss: {loss.item()}")
 
+        torch.save(autoencoder.state_dict(), self.model_path)
+        return autoencoder
+
+    def load_autoencoder(self, hidden_dim=64):
+        input_dim = self.model.vector_size
+        autoencoder = Autoencoder(input_dim, hidden_dim)
+        autoencoder.load_state_dict(torch.load(self.model_path))
+        autoencoder.eval()  # Set the model to evaluation mode
+        logger.info(f"Autoencoder model loaded from {self.model_path}")
         return autoencoder
 
     def cluster_user_embeddings(self):
@@ -143,11 +157,11 @@ class ContentHandler:
             logger.warning(f"User {user_id} has no recent bookmark activity")
             return {}
 
-        embedding = self.shiur_embeddings[self.shiur_embeddings['shiur'] == recent_shiur].iloc[0]['projected_embedding']
+        embedding = self.shiur_embeddings[self.shiur_embeddings['shiur'] == recent_shiur].iloc[0]['embedding']
         similarities = cosine_similarity([embedding], np.stack(
-            self.projected_shiur_embeddings['projected_embedding'].values)).flatten()
+            self.shiur_embeddings['embedding'].values)).flatten()
         similar_shiur_indices = similarities.argsort()[-top_n:][::-1][1:]
-        similar_shiur_ids = self.projected_shiur_embeddings.iloc[similar_shiur_indices]['shiur'].values
+        similar_shiur_ids = self.shiur_embeddings.iloc[similar_shiur_indices]['shiur'].values
 
         recommendations = self.get_recommendations_from_ids(similar_shiur_ids)
         return recommendations
