@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 from ..logging_config import setup_logging
 from typing import List, Tuple
+from sklearn.metrics.pairwise import cosine_similarity
 
 logger = setup_logging()
 
@@ -18,10 +19,12 @@ def evaluate_hit_rate(test_df, handler, k=5):
     total_users = len(test_users)
     logger.info(f"Total users in test set: {total_users}")
     user_hits = []
+    recommendations = []
 
     for i, user in enumerate(test_users, start=1):
         relevant = test_df[test_df['user'] == user]['shiur'].values
         recommended = list(handler.recommend_for_user_content(user, top_n=k).keys())
+        recommendations.append(recommended)
 
         logger.info(f"Evaluating user {i}/{total_users} (ID: {user}):")
         logger.info(f"  Recommendations: {recommended}")
@@ -39,7 +42,51 @@ def evaluate_hit_rate(test_df, handler, k=5):
 
     hit_rate = hits / total_users
     logger.info(f"Final hit rate: {hit_rate}")
-    return hit_rate, user_hits
+    return hit_rate, user_hits, recommendations
+
+
+def evaluate_intra_list_diversity(recommendations: List[List[int]], item_embeddings: pd.DataFrame) -> float:
+    """
+    Evaluate the intra-list diversity of a list of recommendations.
+
+    Parameters:
+    recommendations (List[List[int]]): A list of recommendation lists for different users.
+    item_embeddings (pd.DataFrame): DataFrame with item IDs as the index and their corresponding embeddings as rows.
+
+    Returns:
+    float: The average intra-list diversity across all recommendation lists.
+    """
+    diversities = []
+
+    for recommended_items in recommendations:
+        if len(recommended_items) < 2:
+            continue
+
+        # Extract the embeddings for the recommended items
+        embeddings = item_embeddings[item_embeddings['shiur'].isin(recommended_items)]['embedding'].tolist()
+        embeddings = np.vstack(embeddings)
+
+        # Calculate the pairwise cosine similarity matrix
+        similarity_matrix = cosine_similarity(embeddings)
+
+        # Convert similarities to dissimilarities
+        dissimilarity_matrix = 1 - similarity_matrix
+
+        # Extract the upper triangle of the dissimilarity matrix (excluding the diagonal)
+        num_items = dissimilarity_matrix.shape[0]
+        dissimilarities = [
+            dissimilarity_matrix[i, j]
+            for i in range(num_items) for j in range(i + 1, num_items)
+        ]
+
+        # Calculate the average dissimilarity for this recommendation list
+        average_dissimilarity = np.mean(dissimilarities)
+        diversities.append(average_dissimilarity)
+
+    # Calculate the average intra-list diversity across all users
+    average_diversity = np.mean(diversities) if diversities else 0
+    logger.info(f"Average Intra-list Diversity: {average_diversity}")
+    return average_diversity
 
 
 def split_user_interactions(df, test_size=0.2, interaction_threshold=5):
