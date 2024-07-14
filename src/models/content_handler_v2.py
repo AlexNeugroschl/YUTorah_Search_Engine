@@ -35,13 +35,14 @@ class Autoencoder(nn.Module):
 
 class ContentHandler:
     def __init__(self, user_listens_df=pd.DataFrame(), n_clusters=10):
-        dp = DataProcessor()
-        self.bookmarks_df = dp.load_table(CleanedData.BOOKMARKS)
-        self.shiur_df = dp.load_table(CleanedData.SHIURIM)
-        self.bookmarks_df = self.bookmarks_df.merge(self.shiur_df[['shiur', 'full_details']], on='shiur', how='inner')
 
         self.user_listens_df = user_listens_df
         if self.user_listens_df.empty:
+            dp = DataProcessor()
+            self.bookmarks_df = dp.load_table(CleanedData.BOOKMARKS)
+            self.shiur_df = dp.load_table(CleanedData.SHIURIM)
+            self.bookmarks_df = self.bookmarks_df.merge(
+                self.shiur_df[['shiur', 'full_details']], on='shiur', how='inner')
             self.user_listens_df = self.bookmarks_df
 
         self.user_listens_df['date'] = self.user_listens_df['date_played'].combine_first(
@@ -94,7 +95,7 @@ class ContentHandler:
         vectors = [self.model.wv[word] for word in processed_title if word in self.model.wv]
         return np.mean(vectors, axis=0) if vectors else np.zeros(self.model.vector_size)
 
-    def train_autoencoder(self, hidden_dim=64, epochs=50, learning_rate=1e-3):
+    def train_autoencoder(self, hidden_dim=64, epochs=60, learning_rate=1e-3):
         input_dim = self.model.vector_size
         autoencoder = Autoencoder(input_dim, hidden_dim)
         optimizer = optim.Adam(autoencoder.parameters(), lr=learning_rate)
@@ -118,8 +119,8 @@ class ContentHandler:
             loss.backward()
             optimizer.step()
 
-            if epoch % 10 == 0:
-                logger.info(f"Epoch {epoch}/{epochs}, Loss: {loss.item()}")
+            if epoch % 10 == 9:
+                logger.info(f"Epoch {epoch + 1}/{epochs}, Loss: {loss.item()}")
 
         torch.save(autoencoder.state_dict(), self.model_path)
         return autoencoder

@@ -2,9 +2,12 @@ from fastapi import APIRouter, HTTPException
 from typing import Dict
 from ..logging_config import setup_logging
 from src.models.content_handler_v2 import ContentHandler
+from src.models.content_filtering_v1 import ContentFiltering
 
 router = APIRouter()
 content_filtering = ContentHandler()
+# content_filtering = ContentFiltering()
+
 
 logger = setup_logging()
 
@@ -19,6 +22,18 @@ def get_content_recommendations(user_id: int, top_n: int = 10):
         logger.error(
             f"Shiur ID {user_id} not found in the similarity matrix.")
         raise HTTPException(status_code=404, detail="Shiur ID not found")
+
+
+# @router.get("/becuase-you-listened-recommendations/{shiur_id}", response_model=Dict[int, str])
+# def get_recommendations(shiur_id: int, top_n: int = 5):
+#     try:
+#         recommendations = content_filtering.get_recommendations(
+#             shiur_id, top_n)
+#         return recommendations
+#     except KeyError:
+#         logger.error(
+#             f"Shiur ID {shiur_id} not found in the similarity matrix.")
+#         raise HTTPException(status_code=404, detail="Shiur ID not found")
 
 
 @router.get("/becuase-you-listened-recommendations/{user_id}", response_model=Dict[int, str])

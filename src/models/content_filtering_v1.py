@@ -21,8 +21,14 @@ class ContentFiltering(BaseModel):
         dp = DataProcessor()
         self.df = dp.load_table(CleanedData.SHIURIM)
         self.cat_df = dp.load_table(CleanedData.CATEGORIES)
+        self.bookmarks_df = dp.load_table(CleanedData.BOOKMARKS)
         self.k_clusters = k_clusters
         self.__merge_cluster_info()
+
+        self.user_listens_df = self.bookmarks_df.merge(
+            self.shiur_df[['shiur', 'full_details']], on='shiur', how='inner')
+        self.user_listens_df['date'] = self.user_listens_df['date_played'].combine_first(
+            self.user_listens_df['queue_date'])
 
         self.model_path = "./saved_models/content_filtering/word2vec_titles_v1.model"
         self.similarity_matrix_directory = "./saved_models/content_filtering/sim_matrices"
@@ -50,7 +56,8 @@ class ContentFiltering(BaseModel):
             else:
                 self.__cluster_similarity_matrix(cluster_id)
 
-    def get_recommendations(self, shiur_id: int, top_n: int = 5, *args, **kwargs) -> Dict[int, str]:
+    def get_recommendations(self, user_id: int, top_n: int = 5, *args, **kwargs) -> Dict[int, str]:
+        shiur_id = self.get_most_recent_shiur(user_id)
         recommendations = self.get_weighted_recommendations(shiur_id, top_n)
         titles = self.df.set_index(
             'shiur').loc[recommendations.keys(), 'title']
@@ -119,6 +126,19 @@ class ContentFiltering(BaseModel):
         vectors = [self.model.wv[word]
                    for word in processed_title if word in self.model.wv]
         return np.mean(vectors, axis=0) if vectors else np.zeros(self.model.vector_size)
+
+    def get_most_recent_shiur(self, user_id):
+        recent_listen = self.user_listens_df[(self.user_listens_df['user'] == user_id)
+                                             & (self.user_listens_df['played'] == 1)]
+        if not recent_listen.empty:
+            return recent_listen.sort_values("date", ascending=False).iloc[0]['shiur']
+
+        recent_queue = self.user_listens_df[(self.user_listens_df['user'] == user_id)
+                                            & (self.user_listens_df['bookmark'] == 'queue')]
+        if not recent_queue.empty:
+            return recent_queue.sort_values("queue_date", ascending=False).iloc[0]['shiur']
+
+        return None
 
     @log_and_time_execution
     def __cluster_similarity_matrix(self, cluster_id):
