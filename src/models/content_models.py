@@ -34,11 +34,16 @@ class Autoencoder(nn.Module):
 
 
 class ContentModel:
-    WORD2VEC_PATH = "./saved_models/content_filtering/word2vec_titles_v1.model"
-    AUTOENCODER_PATH = "./saved_models/content_filtering/autoencoder.model"
     VECTOR_SIZE = 200
 
     def __init__(self):
+        curr_dir = os.path.dirname(os.path.abspath(__file__))
+        self.WORD2VEC_PATH = f"{curr_dir}/saved_models/content_filtering/word2vec_v1.model"
+        self.AUTOENCODER_PATH = f"{curr_dir}/saved_models/content_filtering/autoencoder_v1.model"
+        # Ensure directories exist
+        os.makedirs(os.path.dirname(self.WORD2VEC_PATH), exist_ok=True)
+        os.makedirs(os.path.dirname(self.AUTOENCODER_PATH), exist_ok=True)
+
         self.dp = DataProcessor()
         self.shiur_df = self.dp.load_table(CleanedData.SHIURIM)
         self.word2vec = self._load_or_train_word2vec()
