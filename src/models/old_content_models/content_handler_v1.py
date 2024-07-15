@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import pandas as pd
 from typing import Dict
@@ -37,8 +38,8 @@ class ContentHandler:
 
         self.user_listens_df['date'] = self.user_listens_df['date_played'].combine_first(
             self.user_listens_df['queue_date'])
-
-        self.model = Word2Vec.load("./saved_models/content_filtering/word2vec_titles_v1.model")
+        self.WORD2VEC_PATH = "/Users/jeremywizenfeld/Desktop/Torah-Navigator/src/models/saved_models/content_filtering/word2vec_v1.model"
+        self.model = Word2Vec.load(self.WORD2VEC_PATH)
         self.shiur_embeddings = self.get_shiur_embeddings(self.shiur_df)
         self.attention = Attention(embed_size=self.model.vector_size)
         self.user_embeddings = self.get_user_embeddings()
