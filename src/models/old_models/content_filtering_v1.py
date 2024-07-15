@@ -8,9 +8,9 @@ from sklearn.metrics.pairwise import cosine_similarity
 from scipy.sparse import lil_matrix, save_npz, load_npz
 from sklearn.cluster import KMeans
 from src.pipeline.data_processor import DataProcessor, CleanedData
-from .base import BaseModel
-from ..logging_config import setup_logging
-from ..decorators import log_and_time_execution
+from ..base_handler import BaseModel
+from ...logging_config import setup_logging
+from ...decorators import log_and_time_execution
 
 logger = setup_logging()
 

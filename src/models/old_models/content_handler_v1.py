@@ -4,7 +4,7 @@ from typing import Dict
 from sklearn.metrics.pairwise import cosine_similarity
 from gensim.parsing.preprocessing import preprocess_string, strip_punctuation, remove_stopwords, strip_short
 from src.pipeline.data_processor import DataProcessor, CleanedData
-from ..logging_config import setup_logging
+from ...logging_config import setup_logging
 from gensim.models import Word2Vec
 import torch
 import torch.nn as nn
