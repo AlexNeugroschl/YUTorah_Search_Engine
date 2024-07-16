@@ -12,7 +12,7 @@ class CleanedData(Enum):
     BOOKMARKS = "bookmarks_cleaned"
     FAVORITES = "favorites_cleaned"
     CATEGORIES = "categories_cleaned"
-    USER_STATS = "user_stats_cleaned"
+    USER_TASTE = "user_taste_cleaned"
 
 
 class DataProcessor:
@@ -23,13 +23,12 @@ class DataProcessor:
     def load_table(self, table_name: str) -> pd.DataFrame:
         logger.info(f"Loading data from: {table_name.value}")
         query = f"SELECT * FROM {table_name.value}"
-        return pd.read_sql(query, con=self.db,parse_dates=self.__get_date_columns(table_name))
+        return pd.read_sql(query, con=self.db, parse_dates=self.__get_date_columns(table_name))
 
     def load_limit_table(self, table_name: str, entries: int = 100_000) -> pd.DataFrame:
-        #Needs to be fixed - Categories,Favorites, And User Stats have no shiur to be ordered by
         logger.info(f"Loading {entries} entries from: {table_name.value}")
-        query = f"SELECT * FROM {table_name.value} ORDER BY shiur DESC LIMIT {entries}"
-        return pd.read_sql_query(query, con=self.db,parse_dates=self.__get_date_columns(table_name))
+        query = f"SELECT * FROM {table_name.value} DESC LIMIT {entries}"
+        return pd.read_sql_query(query, con=self.db, parse_dates=self.__get_date_columns(table_name))
 
     def load_query(self, query: str) -> pd.DataFrame:
         logger.info(f"Loading data with query: {query}")
@@ -39,7 +38,7 @@ class DataProcessor:
         df.to_sql(table_name.value, con=self.db,
                   if_exists='replace', index=False)
         logger.info(f"Data saved to {table_name.value} table")
-    
+
     def __get_date_columns(self, table_name: str) -> list:
         if table_name == CleanedData.SHIURIM:
             return ['date']
@@ -61,7 +60,7 @@ class DataProcessor:
 
         preprocessor = DataPreprocessing(
             df_shiurim, df_bookmarks, df_favorites)
-        df_shiurim, df_bookmarks, df_favorites, df_categories, df_user_stats = preprocessor.preprocess()
+        df_shiurim, df_bookmarks, df_favorites, df_categories, df_user_taste = preprocessor.preprocess()
 
         df_categories = df_categories.reset_index()
 
@@ -69,12 +68,12 @@ class DataProcessor:
         df_bookmarks.to_csv(f"{CleanedData.BOOKMARKS.value}.csv")
         df_favorites.to_csv(f"{CleanedData.FAVORITES.value}.csv")
         df_categories.to_csv(f"{CleanedData.CATEGORIES.value}.csv")
-        df_user_stats.to_csv(f"{CleanedData.USER_STATS.value}.csv")
+        df_user_taste.to_csv(f"{CleanedData.USER_TASTE.value}.csv")
         self.__save_to_db(df_shiurim, CleanedData.SHIURIM)
         self.__save_to_db(df_bookmarks, CleanedData.BOOKMARKS)
         self.__save_to_db(df_favorites, CleanedData.FAVORITES)
         self.__save_to_db(df_categories, CleanedData.CATEGORIES)
-        self.__save_to_db(df_user_stats, CleanedData.USER_STATS)
+        self.__save_to_db(df_user_taste, CleanedData.USER_TASTE)
 
 
 if __name__ == "__main__":
