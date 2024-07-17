@@ -1,7 +1,9 @@
 import pandas as pd
 import numpy as np
 from ..logging_config import setup_logging
+from ..decorators import log_and_time_execution
 from typing import Tuple
+from .user_taste import UserTaste
 
 logger = setup_logging()
 
@@ -20,20 +22,15 @@ class DataPreprocessing:
         return self.__clean_data()
 
     def __clean_data(self) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-        data_cleaning_methods = {
-            "Shiur Data": self.__clean_shiur_data,
-            "Bookmark Data": self.__clean_bookmark_data,
-            "Favorite Data": self.__clean_favorite_data,
-            "User Statistics": self.__get_user_stats
-        }
+        self.__clean_shiur_data()
+        self.__clean_bookmark_data()
+        self.__clean_favorite_data()
 
-        for data_name, cleaning_method in data_cleaning_methods.items():
-            logger.info(f"START: Cleaning {data_name}")
-            cleaning_method()
-            logger.info(f"FINISH: Cleaning {data_name}")
+        self.df_user_stats = UserTaste(self.df_shiurim, self.df_bookmarks, self.df_categories).get_user_taste()
 
         return self.df_shiurim, self.df_bookmarks, self.df_favorites, self.df_categories, self.df_user_stats
 
+    @log_and_time_execution
     def __clean_shiur_data(self):
         # Subset specifies which fields can't be NaN
         self.df_shiurim.dropna(
@@ -61,6 +58,7 @@ class DataPreprocessing:
             axis=1
         )
 
+    @log_and_time_execution
     def __clean_bookmark_data(self):
         self.df_bookmarks.dropna(
             subset=['user', 'shiur', 'session', 'duration'], inplace=True)
@@ -97,45 +95,12 @@ class DataPreprocessing:
         self.df_bookmarks['listen_percentage'] = np.concatenate(
             listen_percentage)
 
+    @log_and_time_execution
     def __clean_favorite_data(self):
         # No subset, all fields needed
         self.df_favorites.dropna(inplace=True)
         self.df_favorites.drop_duplicates(inplace=True)
         self.df_favorites['user'] = self.df_favorites['user'].astype(int)
-
-    def __get_user_stats(self):
-        shiur_stats_df = pd.DataFrame()
-        listens_df = self.__get_listens(shiur_stats_df)
-        downloads_df = self.__get_downloads(shiur_stats_df)
-        teacher_df = self.__get_top_teacher(shiur_stats_df)
-        self.df_user_stats = listens_df.merge(
-            downloads_df, on='user').merge(teacher_df, on='user')
-        self.df_user_stats = self.df_user_stats[[
-            'total_listens', 'total_downloads', 'top_teacher']]
-
-    def __get_top_teacher(self, shiur_stats_df: pd.DataFrame) -> pd.DataFrame:
-        merged_df = pd.merge(self.df_bookmarks, self.df_shiurim, on='shiur')
-        merged_df['name'] = merged_df['teacher_title'] + ' ' + \
-            merged_df['first_name'] + ' ' + merged_df['last_name']
-        merged_df.drop(
-            columns=['teacher_title', 'last_name', 'first_name'], inplace=True)
-        most_common_name = merged_df.groupby(
-            ['user'])['name'].agg(pd.Series.mode)
-        shiur_stats_df['top_teacher'] = most_common_name
-        return shiur_stats_df
-
-    def __get_downloads(self, shiur_stats_df: pd.DataFrame) -> pd.DataFrame:
-        downloads_df = self.df_bookmarks[self.df_bookmarks['downloaded'] == 1].groupby(
-            'user')
-        shiur_stats_df['total_downloads'] = downloads_df['downloaded'].count()
-        shiur_stats_df['total_downloads'].fillna(0)
-        return shiur_stats_df
-
-    def __get_listens(self, shiur_stats_df: pd.DataFrame) -> pd.DataFrame:
-        listened_df = self.df_bookmarks[self.df_bookmarks['played'] == 1].groupby(
-            'user')
-        shiur_stats_df['total_listens'] = listened_df['played'].count()
-        return shiur_stats_df
 
     def __one_hot_cat(self):
         df_categories = self.df_shiurim[[
