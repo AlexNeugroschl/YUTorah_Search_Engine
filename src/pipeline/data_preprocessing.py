@@ -57,9 +57,7 @@ class DataPreprocessing:
 
         # This will be adjusted depending on needs during final iteration of content filtering
         self.df_shiurim['full_details'] = self.df_shiurim.apply(
-            lambda row: f"Title {row['title']} Speaker {
-                row['last_name']} Category {row['category']}",
-            axis=1
+            lambda row: f"Title {row['title']} Speaker {row['last_name']} Category {row['category']}", axis=1
         )
 
     def __clean_bookmark_data(self):
@@ -152,9 +150,9 @@ class DataPreprocessing:
 
         column_sums = df_combined.sum(axis=0)
         # All categories with less than 500 shiurim are grouped together to "Other"
-        columns_to_aggregate = column_sums[column_sums < 500].index
-        df_combined['Other'] = df_combined[columns_to_aggregate].max(axis=1)
-        df_combined.drop(columns=columns_to_aggregate, inplace=True)
+        # columns_to_aggregate = column_sums[column_sums < 500].index
+        # df_combined['Other'] = df_combined[columns_to_aggregate].max(axis=1)
+        # df_combined.drop(columns=columns_to_aggregate, inplace=True)
 
         # These two categories were causing conflicts in DB so they are combined into one column each
         df_combined['subcategory_Bein Adam L\'Chaveiro'] = df_combined[[

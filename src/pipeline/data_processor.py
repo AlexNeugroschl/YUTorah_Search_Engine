@@ -3,6 +3,7 @@ from .db_connection import db_connection
 from ..logging_config import setup_logging
 import time
 from enum import Enum
+from .calendar_generator import generate_calendar
 
 logger = setup_logging()
 
@@ -13,6 +14,7 @@ class CleanedData(Enum):
     FAVORITES = "favorites_cleaned"
     CATEGORIES = "categories_cleaned"
     USER_STATS = "user_stats_cleaned"
+    CALENDAR = "cycles_calendar"
 
 
 class DataProcessor:
@@ -62,7 +64,27 @@ class DataProcessor:
         self.__save_to_db(df_favorites, CleanedData.FAVORITES)
         self.__save_to_db(df_categories, CleanedData.CATEGORIES)
         self.__save_to_db(df_user_stats, CleanedData.USER_STATS)
-
+        if self.need_to_generate_calendar():
+            df_calendar: pd.DataFrame = generate_calendar()
+            df_calendar.to_csv(f"{CleanedData.CALENDAR.value}.csv")
+            self.__save_to_db(df_calendar, CleanedData.CALENDAR)
+            logger.info("cycles_calendar generated")
+    
+    def need_to_generate_calendar(self) -> bool:
+        from datetime import date,timedelta
+        cur = self.db.cursor()
+        listOfTables = cur.execute(
+            """SELECT name FROM sqlite_master WHERE type='table' 
+            AND name='cycles_calendar'; """).fetchall()
+        if listOfTables == []:
+            logger.info("Calendar does not yet exist")
+            return True
+        # cutoff = str(date.today() + timedelta(30))
+        # cur.execute(f"""
+        #     SELECT name FROM sqlite_master 
+        #     WHERE type='index' AND tbl_name='cycles_calendar' AND name='{cutoff}'
+        #     """)
+        # return True if cur.fetchone() is None else False
 
 if __name__ == "__main__":
     processor = DataProcessor()
