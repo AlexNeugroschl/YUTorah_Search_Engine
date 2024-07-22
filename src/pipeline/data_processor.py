@@ -1,6 +1,7 @@
 import pandas as pd
 from .db_connection import db_connection
 from ..logging_config import setup_logging
+from .user_taste import UserTaste
 import time
 from enum import Enum
 
@@ -60,7 +61,8 @@ class DataProcessor:
 
         preprocessor = DataPreprocessing(
             df_shiurim, df_bookmarks, df_favorites)
-        df_shiurim, df_bookmarks, df_favorites, df_categories, df_user_taste = preprocessor.preprocess()
+        df_shiurim, df_bookmarks, df_favorites, df_categories = preprocessor.preprocess()
+        df_user_taste = UserTaste(df_shiurim, df_bookmarks, df_categories).get_user_taste()
 
         df_categories = df_categories.reset_index()
 

@@ -1,18 +1,19 @@
 import pandas as pd
 from .db_connection import db_connection
 from ..logging_config import setup_logging
+from ..decorators import log_ram_usage, log_and_time_execution
 
 logger = setup_logging()
 
 
 class ETL:
-    def __init__(self, chunk_size: int = 100000):
+    def __init__(self, chunk_size: int = 100_000):
         self.conn = db_connection()
         self.chunk_size = chunk_size
         logger.info("ETL instance created")
 
+    @log_and_time_execution
     def get_favorites_df(self) -> pd.DataFrame:
-        logger.info("START: Favorites Query")
         query_fav = """
         SELECT 
             ufUserKey as 'user',
@@ -23,14 +24,13 @@ class ETL:
         ORDER BY date_favorite_added DESC
         """
         fav_chunks = pd.read_sql_query(
-            query_fav, self.conn, chunksize=self.chunk_size,parse_dates=['date_favorite_added'])
+            query_fav, self.conn, chunksize=self.chunk_size, parse_dates=['date_favorite_added'])
         df_fav = pd.concat(fav_chunks)
         df_fav = df_fav.sort_values(by='user', ascending=True)
-        logger.info("END: Favorites Query")
         return df_fav
 
+    @log_and_time_execution
     def get_bookmarks_df(self) -> pd.DataFrame:
-        logger.info("START: Bookmarks Query")
         query_usb = """
     SELECT
         usbUserKey as 'user',
@@ -51,14 +51,13 @@ class ETL:
     ORDER BY shiur DESC
     """
         usb_chunks = pd.read_sql_query(
-            query_usb, self.conn, chunksize=self.chunk_size,parse_dates=['date','queue_date','date_played','date_downloaded'])
+            query_usb, self.conn, chunksize=self.chunk_size, parse_dates=['date', 'queue_date', 'date_played', 'date_downloaded'])
         df_usb = pd.concat(usb_chunks)
         df_usb = df_usb.sort_values(by='user', ascending=True)
-        logger.info("END: Favorites Query")
         return df_usb
 
+    @log_and_time_execution
     def get_shiurim_df(self) -> pd.DataFrame:
-        logger.info("START: Shiurim Query")
         # Merge with categories
         df_shiurim = pd.merge(self.__get_shiurim_teachers(),
                               self.__get_cat(), on='shiur')
@@ -74,7 +73,6 @@ class ETL:
         # Drop unnecessary columns
         df_shiurim = df_shiurim.drop(columns=['loc_id', 'series_id'])
         df_shiurim.sort_values("shiur", ascending=False)
-        logger.info("END: Shiurim Query")
         return df_shiurim
 
     def __get_shiurim_teachers(self) -> pd.DataFrame:
@@ -101,7 +99,7 @@ class ETL:
         WHERE 
             t.teacherIsHidden = 0 AND s.shiurIsVisibleOnYuTorah = 1
         """
-        return pd.read_sql_query(query_shiurim, self.conn,parse_dates=['date'])
+        return pd.read_sql_query(query_shiurim, self.conn, parse_dates=['date'])
 
     def __get_cat(self) -> pd.DataFrame:
         # Query for categories and subcategories
