@@ -26,9 +26,10 @@ class DataPreprocessing:
         self.__clean_bookmark_data()
         self.__clean_favorite_data()
 
-        self.df_user_stats = UserTaste(self.df_shiurim, self.df_bookmarks, self.df_categories).get_user_taste()
+        #self.df_user_stats = UserTaste(self.df_shiurim, self.df_bookmarks, self.df_categories).get_user_taste()
 
-        return self.df_shiurim, self.df_bookmarks, self.df_favorites, self.df_categories, self.df_user_stats
+        #return self.df_shiurim, self.df_bookmarks, self.df_favorites, self.df_categories, self.df_user_stats
+        return self.df_shiurim, self.df_bookmarks, self.df_favorites, self.df_categories
 
     @log_and_time_execution
     def __clean_shiur_data(self):

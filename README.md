@@ -50,6 +50,15 @@ df = dp.load_table(CleanedData.SHIURIM) # Other options: CleanedData.BOOKMARKS, 
 print(df.head())
 ```
 
+## API Endpoints
+
+#### Trending
+- URL: /api/v1/trending
+- Method: GET
+- URL Parameters:
+- past (int): The number of past days to consider for trending items.
+- Response: Dict[int, str] - A dictionary with item IDs and their corresponding descriptions
+
 ## Coding Standards
 
 - Follow PEP 8 for Python code style.

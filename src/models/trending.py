@@ -1,5 +1,4 @@
-from typing import Dict, List
-from .base import BaseModel
+from typing import Dict
 import pandas as pd
 from datetime import date, timedelta
 from src.pipeline.data_processor import DataProcessor, CleanedData
@@ -12,71 +11,70 @@ class Trending:
         self.shiurim = dp.load_table(CleanedData.SHIURIM)
         self.merged = self.__merge_shiurim(self.shiurim,self.bookmarks)
 
-    def get_trending(self, top_n: int = 5, past: int = 7) -> Dict[int,str]:
-        filtered = self.__filter(past)
+    def get_trending(self, top_n: int = 5, past_days: int = 7) -> Dict[int,str]:
+        filtered = self.__filter(past_days)
         trending_shiurim = self.__get_popularity(filtered)
         return dict(zip(trending_shiurim.index[:top_n],trending_shiurim['full_details'][:top_n]))
 
-    def get_trending_filtered(self,top_n: int = 5, past: int = 7, key: str = None,value: str = None) -> Dict[int, float]:
-        filtered =  self.__filter(past,key,value)
+    def get_trending_filtered(self,top_n: int = 5, past_days: int = 7, feature_key: str = None,feature_value: str = None) -> Dict[int, float]:
+        filtered =  self.__filter(past_days,feature_key,feature_value)
         trending_shiurim = self.__get_popularity(filtered)
         return dict(zip(trending_shiurim.index[:top_n],trending_shiurim['full_details'][:top_n]))
 
-    def __get_top_recent_shiurim(self, merged: pd.DataFrame, past: int = 7) -> pd.DataFrame:
-        shiurim = merged.copy()
-        interactions = self.__get_recent_interactions(past)
+    def __get_top_recent_shiurim(self, past_days: int = 7) -> pd.DataFrame:
+        interactions = self.__get_recent_interactions(past_days)
 
         played = interactions[interactions['played'] == 1].groupby('shiur')
         queued = interactions.dropna(subset='queue_date').groupby('shiur')
 
-        shiurim['total_listens'] = played['played'].count()
-        shiurim['total_queues'] = queued['queue_date'].count()
-        shiurim = shiurim.fillna(0)
-        shiurim['full_details'] = shiurim['full_details'].astype(str)
-        shiurim['total_interactions'] = shiurim['total_listens'] + \
-            shiurim['total_queues']
+        self.merged['total_listens'] = played['played'].count()
+        self.merged['total_queues'] = queued['queue_date'].count()
+        self.merged = self.merged.fillna(0)
+        self.merged['full_details'] = self.merged['full_details'].astype(str)
+        self.merged['total_interactions'] = self.merged['total_listens'] + \
+            self.merged['total_queues']
 
-        return shiurim.sort_values(by='total_interactions', ascending=False)
+        return self.merged.sort_values(by='total_interactions', ascending=False)
 
-    def __get_popularity(self,merged : pd.DataFrame) -> pd.DataFrame:
-        shiurim = self.__get_top_recent_shiurim(merged)
-        shiurim['normalized_listens'] = (
-            (shiurim['total_listens'] - shiurim['total_listens'].min()) /
-            (shiurim['total_listens'].max() - shiurim['total_listens'].min())
+    def __get_popularity(self) -> pd.DataFrame:
+        self.merged = self.__get_top_recent_shiurim()
+        self.merged['normalized_listens'] = (
+            (self.merged['total_listens'] - self.merged['total_listens'].min()) /
+            (self.merged['total_listens'].max() - self.merged['total_listens'].min())
         )
-        shiurim['normalized_queues'] = (
-            (shiurim['total_queues'] - shiurim['total_queues'].min()) /
-            (shiurim['total_queues'].max() - shiurim['total_queues'].min())
+        self.merged['normalized_queues'] = (
+            (self.merged['total_queues'] - self.merged['total_queues'].min()) /
+            (self.merged['total_queues'].max() - self.merged['total_queues'].min())
         )
 
         weight_listens = 0.7
         weight_queues = 0.3
 
-        shiurim['popularity'] = (
-            (weight_listens * shiurim['normalized_listens']) +
-            (weight_queues * shiurim['normalized_queues'])
+        self.merged['popularity'] = (
+            (weight_listens * self.merged['normalized_listens']) +
+            (weight_queues * self.merged['normalized_queues'])
         )
 
-        shiurim.drop(columns=['normalized_listens',
+        self.merged.drop(columns=['normalized_listens',
                      'normalized_queues'], inplace=True)
 
-        return shiurim.sort_values(by='popularity', ascending=False)
+        return self.merged.sort_values(by='popularity', ascending=False)
 
-    def __filter(self, past: int = 7,key: str = None, value: str = None) -> pd.DataFrame:
-        filtered_shiurim = self.__get_recent_interactions(past)
+    def __filter(self, past_days: int = 7,feature_key: str = None, feature_value: str = None) -> pd.DataFrame:
+        filtered_shiurim = self.__get_recent_interactions(past_days)
         
-        if key is not None and value is not None:
-                filtered_shiurim = filtered_shiurim[filtered_shiurim[key] == value]
+        if feature_key is not None and feature_value is not None:
+                filtered_shiurim = filtered_shiurim[filtered_shiurim[feature_key] == feature_value]
         
         return filtered_shiurim
     
-    def __get_recent_interactions(self, past: int = 7) -> pd.DataFrame:
-        interactions = self.merged.copy()
+    def __get_recent_interactions(self, past_days: int = 7) -> pd.DataFrame:
+        interactions = pd.DataFrame()
         today = pd.to_datetime(date.today())
-        delta = today - timedelta(days=past)
-        interactions = interactions[(interactions['date_played'] > delta) |
-                                    (interactions['date_downloaded'] > delta) |
-                                    (interactions['queue_date'] > delta)
+        delta = today - timedelta(days=past_days)
+        interactions = self.merged[(self.merged['date_played'] > delta) |
+                                    (self.merged['date_downloaded'] > delta) |
+                                    (self.merged['queue_date'] > delta)
                                     ]
         return interactions
 
