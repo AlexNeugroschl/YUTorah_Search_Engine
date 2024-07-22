@@ -5,41 +5,26 @@ from datetime import date, timedelta
 from src.pipeline.data_processor import DataProcessor, CleanedData
 
 
-class Trending(BaseModel):
+class Trending:
     def __init__(self):
-        super().__init__()
         dp = DataProcessor()
         self.bookmarks = dp.load_table(CleanedData.BOOKMARKS)
         self.shiurim = dp.load_table(CleanedData.SHIURIM)
         self.merged = self.__merge_shiurim(self.shiurim,self.bookmarks)
 
-    def get_recommendations(self, user_id: str = None, top_n: int = 5, past: int = 7, *args, **kwargs) -> List[int]:
-        for key,value in kwargs.items():
-            if key in self.shiurim.columns:
-                trending_filtered =  self.__get_filtered(key=value)
-                return self.__get_popularity(trending_filtered,past).index[:top_n].tolist()
-        trending_shiurim = self.__get_popularity(
-            self.__get_top_recent_shiurim(self.bookmarks, past))
-        return trending_shiurim.index[:top_n].tolist()
+    def get_trending(self, top_n: int = 5, past: int = 7) -> Dict[int,str]:
+        filtered = self.__filter(past)
+        trending_shiurim = self.__get_popularity(filtered)
+        return dict(zip(trending_shiurim.index[:top_n],trending_shiurim['full_details'][:top_n]))
 
-    def get_weighted_recommendations(self, user_id: str = None, top_n: int = 5, past: int = 7, *args, **kwargs) -> Dict[int, float]:
-        trending_shiurim = self.__get_popularity(
-            self.__get_top_recent_shiurim(self.bookmarks, past))
-        return dict(zip(trending_shiurim.index[:top_n], trending_shiurim['popularity'][:top_n]))
+    def get_trending_filtered(self,top_n: int = 5, past: int = 7, key: str = None,value: str = None) -> Dict[int, float]:
+        filtered =  self.__filter(past,key,value)
+        trending_shiurim = self.__get_popularity(filtered)
+        return dict(zip(trending_shiurim.index[:top_n],trending_shiurim['full_details'][:top_n]))
 
-    def __get_recent_interactions(self, bookmarks: pd.DataFrame, past: int = 7) -> pd.DataFrame:
-        interactions = bookmarks
-        today = pd.to_datetime(date.today())
-        delta = today - timedelta(days=past)
-        interactions = interactions[(interactions['date_played'] > delta) |
-                                    (interactions['date_downloaded'] > delta) |
-                                    (interactions['queue_date'] > delta)
-                                    ]
-        return interactions
-
-    def __get_top_recent_shiurim(self, bookmarks: pd.DataFrame, past: int = 7) -> pd.DataFrame:
-        shiurim = pd.DataFrame()
-        interactions = self.__get_recent_interactions(bookmarks, past)
+    def __get_top_recent_shiurim(self, merged: pd.DataFrame, past: int = 7) -> pd.DataFrame:
+        shiurim = merged.copy()
+        interactions = self.__get_recent_interactions(past)
 
         played = interactions[interactions['played'] == 1].groupby('shiur')
         queued = interactions.dropna(subset='queue_date').groupby('shiur')
@@ -47,12 +32,14 @@ class Trending(BaseModel):
         shiurim['total_listens'] = played['played'].count()
         shiurim['total_queues'] = queued['queue_date'].count()
         shiurim = shiurim.fillna(0)
+        shiurim['full_details'] = shiurim['full_details'].astype(str)
         shiurim['total_interactions'] = shiurim['total_listens'] + \
             shiurim['total_queues']
 
         return shiurim.sort_values(by='total_interactions', ascending=False)
 
-    def __get_popularity(self, shiurim: pd.DataFrame) -> pd.DataFrame:
+    def __get_popularity(self,merged : pd.DataFrame) -> pd.DataFrame:
+        shiurim = self.__get_top_recent_shiurim(merged)
         shiurim['normalized_listens'] = (
             (shiurim['total_listens'] - shiurim['total_listens'].min()) /
             (shiurim['total_listens'].max() - shiurim['total_listens'].min())
@@ -75,18 +62,30 @@ class Trending(BaseModel):
 
         return shiurim.sort_values(by='popularity', ascending=False)
 
+    def __filter(self, past: int = 7,key: str = None, value: str = None) -> pd.DataFrame:
+        filtered_shiurim = self.__get_recent_interactions(past)
+        
+        if key is not None and value is not None:
+                filtered_shiurim = filtered_shiurim[filtered_shiurim[key] == value]
+        
+        return filtered_shiurim
+    
+    def __get_recent_interactions(self, past: int = 7) -> pd.DataFrame:
+        interactions = self.merged.copy()
+        today = pd.to_datetime(date.today())
+        delta = today - timedelta(days=past)
+        interactions = interactions[(interactions['date_played'] > delta) |
+                                    (interactions['date_downloaded'] > delta) |
+                                    (interactions['queue_date'] > delta)
+                                    ]
+        return interactions
+
     def __merge_shiurim(self, shiurim: pd.DataFrame, bookmarks: pd.DataFrame) -> pd.DataFrame:
         shiurim['name'] = shiurim['teacher_title'] + ' ' + \
             shiurim['first_name'] + ' ' + shiurim['last_name']
         shiurim.drop(columns=['teacher_title',
                      'first_name', 'last_name'], inplace=True)
-        shiurim = shiurim[['shiur', 'title', 'name', 'duration',
-                           'category', 'middle_category', 'subcategory', 'series_name']]
-        merged = pd.merge(bookmarks, shiurim, on='shiur')
+        shiurim = shiurim[['shiur', 'title', 'name',
+                           'category', 'middle_category', 'subcategory', 'series_name','full_details']]
+        merged = pd.merge(bookmarks, shiurim, on='shiur',how='left')
         return merged
-
-    def __get_filtered(self, **kwargs) -> pd.DataFrame:
-        trending_shiurim = self.__get_top_recent_shiurim(self.merged)
-        for key, value in kwargs.items():
-            trending_shiurim = trending_shiurim[trending_shiurim[key] == value]
-        return trending_shiurim
