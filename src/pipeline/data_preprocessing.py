@@ -1,8 +1,8 @@
 import pandas as pd
 import numpy as np
+from typing import Tuple
 from ..logging_config import setup_logging
 from ..decorators import log_and_time_execution
-from typing import Tuple
 
 logger = setup_logging()
 
@@ -127,7 +127,7 @@ class DataPreprocessing:
             df_combined.drop(
                 columns=['subcategory_Beit Hamikdash'], inplace=True)
 
-        self.df_categories = df_combined
+        self.df_categories = df_combined.reset_index()
 
     def __clean_text(self, text: str) -> str:
         if pd.isna(text):

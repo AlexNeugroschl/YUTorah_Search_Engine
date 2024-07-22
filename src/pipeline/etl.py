@@ -1,7 +1,7 @@
 import pandas as pd
 from .db_connection import db_connection
 from ..logging_config import setup_logging
-from ..decorators import log_ram_usage, log_and_time_execution
+from ..decorators import log_and_time_execution
 
 logger = setup_logging()
 

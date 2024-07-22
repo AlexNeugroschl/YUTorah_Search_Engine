@@ -1,9 +1,9 @@
+import time
 import pandas as pd
+from enum import Enum
+from .user_taste import UserTaste
 from .db_connection import db_connection
 from ..logging_config import setup_logging
-from .user_taste import UserTaste
-import time
-from enum import Enum
 
 logger = setup_logging()
 
@@ -59,12 +59,9 @@ class DataProcessor:
         df_bookmarks: pd.DataFrame = etl.get_bookmarks_df()
         df_favorites: pd.DataFrame = etl.get_favorites_df()
 
-        preprocessor = DataPreprocessing(
-            df_shiurim, df_bookmarks, df_favorites)
+        preprocessor = DataPreprocessing(df_shiurim, df_bookmarks, df_favorites)
         df_shiurim, df_bookmarks, df_favorites, df_categories = preprocessor.preprocess()
         df_user_taste = UserTaste(df_shiurim, df_bookmarks, df_categories).get_user_taste()
-
-        df_categories = df_categories.reset_index()
 
         df_shiurim.to_csv(f"{CleanedData.SHIURIM.value}.csv")
         df_bookmarks.to_csv(f"{CleanedData.BOOKMARKS.value}.csv")
