@@ -71,7 +71,7 @@ class DataProcessor:
             logger.info("cycles_calendar generated")
     
     def need_to_generate_calendar(self) -> bool:
-        from datetime import date,timedelta
+        return True
         cur = self.db.cursor()
         listOfTables = cur.execute(
             """SELECT name FROM sqlite_master WHERE type='table' 
@@ -79,12 +79,7 @@ class DataProcessor:
         if listOfTables == []:
             logger.info("Calendar does not yet exist")
             return True
-        # cutoff = str(date.today() + timedelta(30))
-        # cur.execute(f"""
-        #     SELECT name FROM sqlite_master 
-        #     WHERE type='index' AND tbl_name='cycles_calendar' AND name='{cutoff}'
-        #     """)
-        # return True if cur.fetchone() is None else False
+
 
 if __name__ == "__main__":
     processor = DataProcessor()

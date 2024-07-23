@@ -157,19 +157,19 @@ def map_data(df:pd.DataFrame):
     'Moed Katan': 'subcategory_Moed Katan',
     'Chagigah': 'subcategory_Chagigah',
     'Yevamot': 'subcategory_Yevamot',
-    'Ketubot': 'subcategory_Ketubot',
+    'Ketubot': 'subcategory_Ketuvot',
     'Nedarim': 'subcategory_Nedarim',
     'Nazir': 'subcategory_Nazir',
     'Sotah': 'subcategory_Sotah',
     'Gitin': 'subcategory_Gitin',
     'Gittin': 'subcategory_Gitin',
     'Kiddushin': 'subcategory_Kiddushin',
-    'Baba Kamma': 'subcategory_Baba Kamma',
-    'Baba Metzia': 'subcategory_Baba Metzia',
-    'Baba Batra': 'subcategory_Baba Batra',
-    'Bava Kamma': 'subcategory_Baba Kamma',
-    'Bava Metzia': 'subcategory_Baba Metzia',
-    'Bava Batra': 'subcategory_Baba Batra',
+    'Baba Kamma': 'subcategory_Bava Kamma',
+    'Baba Metzia': 'subcategory_Bava Metzia',
+    'Baba Batra': 'subcategory_Bava Batra',
+    'Bava Kamma': 'subcategory_Bava Kamma',
+    'Bava Metzia': 'subcategory_Bava Metzia',
+    'Bava Batra': 'subcategory_Bava Batra',
     'Sanhedrin': 'subcategory_Sanhedrin',
     'Makkot': 'subcategory_Makkot',
     'Shevuot': 'subcategory_Shevuot',
@@ -284,6 +284,7 @@ def map_data(df:pd.DataFrame):
     values_to_drop = ["Yom HaAliyah", "Rosh Hashana LaBehemot", "Erev Tish’a B’Av", "Erev Rosh Hashana", "Erev Yom Kippur", "Erev Sukkot", "Sigd", "Chag HaBanot", "Erev Purim", "Purim Meshulash", "Erev Pesach", "Shushan Purim", "Shushan Purim Katan", "Erev Shavuot", "Ta’anit Bechorot", "Tu B’Av"]
     df = df[~((df['category'] == 'holiday') & (df['title'].isin(values_to_drop)))]
     df = df.pivot_table(index="date", columns="category", values="title", aggfunc=lambda x: ', '.join(x))
+    df.reset_index(inplace=True)
     df.drop(columns=['mevarchim'], inplace=True)
     #parashat processing
     df['parashat'] = df['parashat'].replace(parashat_mapping)
