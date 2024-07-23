@@ -28,7 +28,6 @@ def get_learning_cycle_recommendations(cycle:LearningCycle, date:date=date.today
           df = get_mishna_recommendation(cycle, date_data)
      else:
           return None
-     # df.sort_values(by='date', inplace=True, ascending=False)
      return(df["shiur"].tolist())
 
 def get_standard_learning(cycle:LearningCycle, row:pd.DataFrame):
@@ -42,7 +41,7 @@ def get_standard_learning(cycle:LearningCycle, row:pd.DataFrame):
      (df_merged[row.iloc[0][cycle.value[2]]] == 1) &
      (df_merged['series_name'] == cycle.value[0])
      ].copy()
-     df.loc[:, 'numbers'] = df['title'].apply(extract_numbers)
+     df.loc[:, 'numbers'] = df['title'].apply(__extract_numbers)
      cycle_value1 = int(row[cycle.value[3]].item() if hasattr(row[cycle.value[3]], 'item') else row[cycle.value[3]])
      filtered_df = df[df['numbers'].apply(lambda x: x[0] == cycle_value1 if len(x) > 0 else False)]
      filtered_df = filtered_df.drop(columns=['numbers'])
@@ -71,7 +70,7 @@ def get_mishna_recommendation(cycle:LearningCycle, row:pd.DataFrame):
      (df_merged[row.iloc[0][cycle.value[2]]] == 1) &
      (df_merged['series_name'] == cycle.value[0])
      ].copy()
-     df.loc[:, 'numbers'] = df['title'].apply(extract_numbers)
+     df.loc[:, 'numbers'] = df['title'].apply(__extract_numbers)
      print(df[['title', 'numbers']])
      cycle_value1 = int(row[cycle.value[3]].item() if hasattr(row[cycle.value[3]], 'item') else row[cycle.value[3]])
      cycle_value2 = int(row[cycle.value[4]].item() if hasattr(row[cycle.value[4]], 'item') else row[cycle.value[4]])
@@ -79,5 +78,28 @@ def get_mishna_recommendation(cycle:LearningCycle, row:pd.DataFrame):
      filtered_df = filtered_df.drop(columns=['numbers'])
      return filtered_df
 
-def extract_numbers(title):
+def __extract_numbers(title):
     return [int(num) for num in re.findall(r'\b\d+\b|(?<=[:\-])\d+', title)]
+
+def get_holiday(start_date:date=date.today(), end_date:date=date.today()+timedelta(3)):
+      if str(start_date) not in calendar['date'].values:
+            return []
+      holiday_data = calendar[(calendar['date'] >= str(start_date)) & (calendar['date'] <= str(end_date))]
+      no_holiday = holiday_data['holiday'].isna().all()
+      no_roshchodesh = holiday_data['roshchodesh'].isna().all()
+      if no_holiday == False:
+            first_holiday = holiday_data['holiday'].dropna().iloc[0]
+            df_categories = dp.load_table(CleanedData.CATEGORIES)
+            df_shiurim = dp.load_table(CleanedData.SHIURIM)
+            df_merged = pd.merge(df_categories, df_shiurim, on='shiur', suffixes=('_cat', '_shiur'))
+            filtered_df = df_merged[(df_merged[first_holiday] == 1)]
+            return(filtered_df["shiur"].tolist())
+      elif no_roshchodesh == False:
+            first_roshchodesh = holiday_data['holiday'].dropna().iloc[0]
+            df_categories = dp.load_table(CleanedData.CATEGORIES)
+            df_shiurim = dp.load_table(CleanedData.SHIURIM)
+            df_merged = pd.merge(df_categories, df_shiurim, on='shiur', suffixes=('_cat', '_shiur'))
+            filtered_df = df_merged[(df_merged[first_roshchodesh] == 1)]
+            return(filtered_df["shiur"].tolist())
+      else:
+            return []
