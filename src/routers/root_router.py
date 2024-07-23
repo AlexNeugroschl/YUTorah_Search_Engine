@@ -24,7 +24,7 @@ def get_content_recommendations(user_id: int, top_n: int = 10):
         raise HTTPException(status_code=404, detail="Shiur ID not found")
 
 
-@router.get("/becuase-you-listened-recommendations/{user_id}", response_model=Dict[int, str])
+@router.get("/because-you-listened-recommendations/{user_id}", response_model=Dict[int, str])
 def get_because_you_listened_recommendations(user_id: int, top_n: int = 5):
     try:
         recommendations = content_filtering.recommend_based_on_recent_activity(
@@ -36,7 +36,7 @@ def get_because_you_listened_recommendations(user_id: int, top_n: int = 5):
         raise HTTPException(status_code=404, detail="Shiur ID not found")
     
 @router.get("/trending",response_model=Dict[int,str])
-def get_trending_regular(top_n: int = 5 , past_days: int = 7):
+def get_trending(top_n: int = 5 , past_days: int = 7):
     recommendations = trending.get_trending(top_n=top_n,past_days=past_days)
     return recommendations
 
