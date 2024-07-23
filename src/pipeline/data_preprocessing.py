@@ -1,9 +1,8 @@
 import pandas as pd
 import numpy as np
+from typing import Tuple
 from ..logging_config import setup_logging
 from ..decorators import log_and_time_execution
-from typing import Tuple
-from .user_taste import UserTaste
 
 logger = setup_logging()
 
@@ -13,22 +12,18 @@ class DataPreprocessing:
         self.df_shiurim = df_shiurim
         self.df_bookmarks = df_bookmarks
         self.df_favorites = df_favorites
-        self.df_user_stats = pd.DataFrame()
         # One hot encoded matrix for all shiurim and their categories
         self.df_categories = pd.DataFrame()
         logger.info("DataPreprocessing instance created")
 
-    def preprocess(self) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    def preprocess(self) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
         return self.__clean_data()
 
-    def __clean_data(self) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    def __clean_data(self) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
         self.__clean_shiur_data()
         self.__clean_bookmark_data()
         self.__clean_favorite_data()
-
-        self.df_user_stats = UserTaste(self.df_shiurim, self.df_bookmarks, self.df_categories).get_user_taste()
-
-        return self.df_shiurim, self.df_bookmarks, self.df_favorites, self.df_categories, self.df_user_stats
+        return self.df_shiurim, self.df_bookmarks, self.df_favorites, self.df_categories
 
     @log_and_time_execution
     def __clean_shiur_data(self):
@@ -43,7 +38,7 @@ class DataPreprocessing:
         self.df_shiurim.drop_duplicates(subset=['shiur'], inplace=True)
 
         # Categories are ommitted from text cleaning as they are always formatted correctly
-        text_columns = ['title', 'teacher_title', 'last_name',
+        text_columns = ['teacher_title', 'last_name',
                         'first_name', 'keywords', 'series_name', 'series_description']
         for col in text_columns:
             self.df_shiurim[col] = self.df_shiurim[col].apply(
@@ -57,6 +52,8 @@ class DataPreprocessing:
             lambda row: f"Title {row['title']} Speaker {row['last_name']} Category {row['category']}",
             axis=1
         )
+        self.df_shiurim['full_details'] = self.df_shiurim['full_details'].apply(
+            self.__clean_text)
 
     @log_and_time_execution
     def __clean_bookmark_data(self):
@@ -132,7 +129,7 @@ class DataPreprocessing:
             df_combined.drop(
                 columns=['subcategory_Beit Hamikdash'], inplace=True)
 
-        self.df_categories = df_combined
+        self.df_categories = df_combined.reset_index()
 
     def __clean_text(self, text: str) -> str:
         if pd.isna(text):
