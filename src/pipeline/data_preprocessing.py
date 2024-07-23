@@ -38,7 +38,7 @@ class DataPreprocessing:
         self.df_shiurim.drop_duplicates(subset=['shiur'], inplace=True)
 
         # Categories are ommitted from text cleaning as they are always formatted correctly
-        text_columns = ['title', 'teacher_title', 'last_name',
+        text_columns = ['teacher_title', 'last_name',
                         'first_name', 'keywords', 'series_name', 'series_description']
         for col in text_columns:
             self.df_shiurim[col] = self.df_shiurim[col].apply(
@@ -52,6 +52,8 @@ class DataPreprocessing:
             lambda row: f"Title {row['title']} Speaker {row['last_name']} Category {row['category']}",
             axis=1
         )
+        self.df_shiurim['full_details'] = self.df_shiurim['full_details'].apply(
+            self.__clean_text)
 
     @log_and_time_execution
     def __clean_bookmark_data(self):
