@@ -71,7 +71,6 @@ class DataProcessor:
             logger.info("cycles_calendar generated")
     
     def need_to_generate_calendar(self) -> bool:
-        return True
         cur = self.db.cursor()
         listOfTables = cur.execute(
             """SELECT name FROM sqlite_master WHERE type='table' 

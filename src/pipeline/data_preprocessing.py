@@ -148,12 +148,6 @@ class DataPreprocessing:
         df_combined = df_combined.groupby(
             'shiur').max().astype(int).sort_index(ascending=False)
 
-        column_sums = df_combined.sum(axis=0)
-        # All categories with less than 500 shiurim are grouped together to "Other"
-        # columns_to_aggregate = column_sums[column_sums < 500].index
-        # df_combined['Other'] = df_combined[columns_to_aggregate].max(axis=1)
-        # df_combined.drop(columns=columns_to_aggregate, inplace=True)
-
         # These two categories were causing conflicts in DB so they are combined into one column each
         df_combined['subcategory_Bein Adam L\'Chaveiro'] = df_combined[[
             'subcategory_Bein Adam L\'Chaveiro', 'subcategory_Bein Adam l\'Chaveiro']].max(axis=1)
