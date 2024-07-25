@@ -1,12 +1,9 @@
 from src.pipeline.data_processor import DataProcessor, CleanedData
 from enum import Enum
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 import pandas as pd
 import re
 
-
-dp = DataProcessor()
-calendar = dp.load_table(CleanedData.CALENDAR)
 
 class LearningCycle(Enum):
     DAF = ["Daf Yomi", "category_Gemara", "d_masechta", "d_num"]
@@ -20,12 +17,14 @@ class LearningCycle(Enum):
 class CycleRecommendations():
      def __init__(self):
           self.dp = DataProcessor()
-          self.calendar = dp.load_table(CleanedData.CALENDAR)
-          df_categories = dp.load_table(CleanedData.CATEGORIES)
-          df_shiurim = dp.load_table(CleanedData.SHIURIM)
+          self.calendar = self.dp.load_table(CleanedData.CALENDAR)
+          df_categories = self.dp.load_table(CleanedData.CATEGORIES)
+          df_shiurim = self.dp.load_table(CleanedData.SHIURIM)
           self.df_merged = pd.merge(df_categories, df_shiurim, on='shiur', suffixes=('_cat', '_shiur'))
 
      def get_all_recommendations(self, date:date=date.today()):
+          if isinstance(date, str):
+            date = datetime.strptime(date, "%Y-%m-%d").date()
           all_recommendations = []
           for cycle in LearningCycle:
                recommendations = self.get_learning_cycle_recommendations(cycle, date)
@@ -34,9 +33,11 @@ class CycleRecommendations():
           return all_recommendations
 
      def get_learning_cycle_recommendations(self, cycle:LearningCycle, date:date=date.today()):
-          if str(date) not in calendar['date'].values:
+          if isinstance(date, str):
+            date = datetime.strptime(date, "%Y-%m-%d").date()
+          if str(date) not in self.calendar['date'].values:
                return []
-          date_data = calendar[calendar['date'] == str(date)]
+          date_data = self.calendar[self.calendar['date'] == str(date)]
           if cycle in [LearningCycle.DAF, LearningCycle.WEEKLY_DAF, LearningCycle.NACH, LearningCycle.YERUSHALMI]:
                df = self.get_standard_learning(cycle, date_data)
           elif cycle == LearningCycle.PARSHA:
@@ -89,16 +90,19 @@ class CycleRecommendations():
           return [int(num) for num in re.findall(r'\b\d+\b|(?<=[:\-])\d+', title)]
 
      def get_holiday(self, start_date:date=date.today(), end_date:date=date.today()+timedelta(3)):
-          if str(start_date) not in calendar['date'].values:
+          if isinstance(start_date, str):
+            start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
+            end_date = datetime.strptime(end_date, "%Y-%m-%d").date()
+          if str(start_date) not in self.calendar['date'].values:
                return []
-          holiday_data = calendar[(calendar['date'] >= str(start_date)) & (calendar['date'] <= str(end_date))]
+          holiday_data = self.calendar[(self.calendar['date'] >= str(start_date)) & (self.calendar['date'] <= str(end_date))]
           no_holiday = holiday_data['holiday'].isna().all()
           no_roshchodesh = pd.isna(holiday_data['roshchodesh'].iloc[0])
-          if no_holiday == False:
+          if not no_holiday:
                first_holiday = holiday_data['holiday'].dropna().iloc[0]
                filtered_df = self.df_merged[(self.df_merged[first_holiday] == 1) & (self.df_merged['category_Holidays'] == 1)]
                return(filtered_df["shiur"].tolist())
-          elif no_roshchodesh == False:
+          elif not no_roshchodesh:
                first_roshchodesh = holiday_data['holiday'].dropna().iloc[0]
                filtered_df = self.df_merged[(self.df_merged[first_roshchodesh] == 1) & (self.df_merged['category_Holidays'] == 1)]
                return(filtered_df["shiur"].tolist())

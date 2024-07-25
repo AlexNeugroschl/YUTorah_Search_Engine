@@ -68,16 +68,13 @@ class DataProcessor:
             df_calendar: pd.DataFrame = generate_calendar()
             df_calendar.to_csv(f"{CleanedData.CALENDAR.value}.csv")
             self.__save_to_db(df_calendar, CleanedData.CALENDAR)
-            logger.info("cycles_calendar generated")
     
     def need_to_generate_calendar(self) -> bool:
         cur = self.db.cursor()
         listOfTables = cur.execute(
             """SELECT name FROM sqlite_master WHERE type='table' 
             AND name='cycles_calendar'; """).fetchall()
-        if listOfTables == []:
-            logger.info("Calendar does not yet exist")
-            return True
+        return not listOfTables if not listOfTables else True
 
 
 if __name__ == "__main__":
