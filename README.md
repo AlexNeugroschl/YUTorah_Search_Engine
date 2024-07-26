@@ -50,6 +50,47 @@ df = dp.load_table(CleanedData.SHIURIM) # Other options: CleanedData.BOOKMARKS, 
 print(df.head())
 ```
 
+## API Endpoints
+
+#### Content Recommendations
+- URL: /api/v1/content-recommendations/{user_id}
+- Method: GET
+- URL Parameters:
+- `top_n (int)`: The number of recomendations to show. Default value is 10.
+- `user_id (int)`: The ID of the user to get content recommendations for.
+- Response: Dict[int, str] - A dictionary with Shiur IDs and their corresponding titles, speakers, and categories.
+#### Becuase You Liked Recommendations
+- URL: /api/v1/because-you-listened-recommendations/{user_id}
+- Method: GET
+- URL Parameters:
+- `top_n (int)`: The number of recomendations to show. default value is 5.
+- `user_id (int)`: The ID of the user to get 'because-you-liked' recommendations for.
+- Response: Dict[int, str] - A dictionary with Shiur IDs and their corresponding titles, speakers, and categories.
+#### Trending Recommendations
+- URL: /api/v1/trending
+- Method: GET
+- URL Parameters:
+- `top_n (int)`: The number of recomendations to show. Default value is 5.
+- `past_days (int)`: The number of past days to consider for trending items. Default value is 7.
+- Response: Dict[int, str] - A dictionary with Shiur IDs and their corresponding titles, speakers, and categories.
+#### Trending Filtered Recommendations
+- URL: /api/v1/trending/filtered/{feature_key}={feature_value}
+- Method: GET
+- URL Parameters:
+- `top_n (int)`: The number of recomendations to show. Default value is 5.
+- `past_days (int)`: The number of past days to consider for trending items. Default value is 7.
+- `feature_key (str)`: The feauture key to filter trending shiurim by. Valid feature keys include:
+  - `name` (of speaker)
+  - `category`
+  - `middle_category`
+  - `subcategory`
+  - `series_name`
+- `feature_value (str)`: The feature value to filter trending shiurim by. The format for name is speaker title, first name, and last name, all capitalized with a space between words. All category filters should be capitalized with a space between multiple words. Categories include:
+  - `category`: Broader categories such as Parsha, Gemara, Machshava, Halacha, among others.
+  - `middle_category`: Holidays, books of Chumash, Seder of Mishna/Gemara, Chelek in Shulchan Aruch, among others.
+  - `subcategory`: Names of the parsha, mesechtot, holiday names, section of Halacha, among others.
+- Response: Dict[int, str] - A dictionary with Shiur IDs and their corresponding titles, speakers, and categories.
+
 ## Coding Standards
 
 - Follow PEP 8 for Python code style.
