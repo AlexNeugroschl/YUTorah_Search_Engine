@@ -149,17 +149,50 @@ class DataPreprocessing:
             'shiur').max().astype(int).sort_index(ascending=False)
 
         # These two categories were causing conflicts in DB so they are combined into one column each
-        df_combined['subcategory_Bein Adam L\'Chaveiro'] = df_combined[[
-            'subcategory_Bein Adam L\'Chaveiro', 'subcategory_Bein Adam l\'Chaveiro']].max(axis=1)
-        df_combined.drop(
-            columns=['subcategory_Bein Adam l\'Chaveiro'], inplace=True)
+        # df_combined['subcategory_Bein Adam L\'Chaveiro'] = df_combined[[
+        #     'subcategory_Bein Adam L\'Chaveiro', 'subcategory_Bein Adam l\'Chaveiro']].max(axis=1)
+        # df_combined.drop(
+        #     columns=['subcategory_Bein Adam l\'Chaveiro'], inplace=True)
 
-        df_combined['subcategory_Beit HaMikdash'] = df_combined[[
-            'subcategory_Beit HaMikdash', 'subcategory_Beit Hamikdash']].max(axis=1)
-        df_combined.drop(
-            columns=['subcategory_Beit Hamikdash'], inplace=True)
+        # df_combined['subcategory_Beit HaMikdash'] = df_combined[[
+        #     'subcategory_Beit HaMikdash', 'subcategory_Beit Hamikdash']].max(axis=1)
+        # df_combined.drop(
+        #     columns=['subcategory_Beit Hamikdash'], inplace=True)
+        col_pairs = [
+            ('subcategory_Bein Adam L\'Chaveiro', 'subcategory_Bein Adam l\'Chaveiro'), 
+            ('subcategory_Beit HaMikdash', 'subcategory_Beit Hamikdash'),
+            ('subcategory_Berachos', 'subcategory_Berachot'),
+            ('subcategory_Berachos', 'subcategory_Brachot'),
+            ('subcategory_Peah', 'subcategory_Pe\'ah'),
+            ('subcategory_Terumos', 'subcategory_Terumot'),
+            ('subcategory_Maaser Sheni', 'subcategory_Ma\'aser Sheni'),
+            ('subcategory_Challah', 'subcategory_Chala'),
+            ('subcategory_Maaseros', 'subcategory_Ma\'asrot'),
+            ('subcategory_Orla', 'subcategory_Orlah'),
+            ('subcategory_Sheviis', 'subcategory_Shevi\'it'),
+            ('subcategory_Shabbos', 'subcategory_Shabbat'),
+            ('subcategory_Yuma', 'subcategory_Yoma'),
+            ('subcategory_Chagiga', 'subcategory_Chagigah'),
+            ('subcategory_Moed Katan', 'subcategory_Moed Kattan'),
+            ('subcategory_Taanis', 'subcategory_Ta\'anit'),
+            ('subcategory_Taanis', 'subcategory_Taanit'),
+            ('subcategory_Yevamos', 'subcategory_Yevamot'),
+            ('subcategory_Kesubos', 'subcategory_Ketuvot'),
+            ('subcategory_Bava Basra', 'subcategory_Bava Batra'),
+            ('subcategory_Shavuos', 'subcategory_Shevuot'),
+            ('subcategory_Makkos', 'subcategory_Makkot'),
+            ('subcategory_Makkos', 'subcategory_Makot'),
+            ('subcategory_Avoda Zara', 'subcategory_Avodah Zara'),
+            ('subcategory_Horayos', 'subcategory_Horayot'),
+            ('subcategory_Nidah', 'subcategory_Niddah')
+            ]
+        for col1, col2 in col_pairs:
+            df_combined[col1] = df_combined[[col1, col2]].max(axis=1)
+            df_combined.drop(columns=[col2], inplace=True)
+        df_combined['subcategory_Tazria-Metzora'] = df_combined[['subcategory_Tazria', 'subcategory_Metzora']].max(axis=1)
+        df_combined['subcategory_Nitzavim-Vayeilech'] = df_combined[['subcategory_Nitzavim', 'subcategory_Vayeilech']].max(axis=1)
 
-        self.df_categories = df_combined
+        self.df_categories = df_combined.reset_index()
 
     def __clean_text(self, text: str) -> str:
         if pd.isna(text):
