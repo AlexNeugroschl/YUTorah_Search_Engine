@@ -80,5 +80,5 @@ def get_learning_cycle_recommendations(date=date.today()):
     return cycle_recommendations.get_mishnah_recommendations(date)
     
 @router.get("/cycle-recommendations/holiday")
-def get_holiday_cycle_recommendations(start_date=date.today(), end_date=date.today()+3):
-    return cycle_recommendations.get_holiday(start_date, end_date)
+def get_holiday_cycle_recommendations(start_date=date.today(), end_date=date.today()+timedelta(days=3)):
+    return cycle_recommendations.get_holiday_recommendations(start_date, end_date)

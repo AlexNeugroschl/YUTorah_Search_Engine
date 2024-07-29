@@ -29,7 +29,7 @@ class CycleRecommendations():
           for cycle in LearningCycle:
                recommendations = self.get_learning_cycle_recommendations(cycle, date)
                all_recommendations.extend(recommendations)
-          all_recommendations.extend(self.get_holiday_recommendations(date, date+timedelta(3)))
+          all_recommendations.extend(self.get_holiday_recommendations(date, date+timedelta(days=3)))
           return all_recommendations
 
      def get_daf_recommendations(self, date:date=date.today):
@@ -107,7 +107,7 @@ class CycleRecommendations():
      def __extract_numbers(self, title):
           return [int(num) for num in re.findall(r'\b\d+\b|(?<=[:\-])\d+', title)]
 
-     def get_holiday_recommendations(self, start_date:date=date.today(), end_date:date=date.today()+timedelta(3)):
+     def get_holiday_recommendations(self, start_date:date=date.today(), end_date:date=date.today()+timedelta(days=3)):
           if isinstance(start_date, str):
             start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
             end_date = datetime.strptime(end_date, "%Y-%m-%d").date()
