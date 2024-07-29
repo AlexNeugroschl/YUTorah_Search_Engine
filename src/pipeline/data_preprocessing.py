@@ -49,9 +49,8 @@ class DataPreprocessing:
 
         # This will be adjusted depending on needs during final iteration of content filtering
         self.df_shiurim['full_details'] = self.df_shiurim.apply(
-            lambda row: f"Title {row['title']} Speaker {row['last_name']} Category {row['category']}",
-            axis=1
-        )
+            lambda row: f"Title {row['title']} Speaker {row['last_name']} Category {row['category']}", axis=1)
+        
         self.df_shiurim['full_details'] = self.df_shiurim['full_details'].apply(
             self.__clean_text)
 
@@ -111,23 +110,39 @@ class DataPreprocessing:
         df_combined = df_combined.groupby(
             'shiur').max().astype(int).sort_index(ascending=False)
 
-        column_sums = df_combined.sum(axis=0)
-        # All categories with less than 500 shiurim are grouped together to "Other"
-        columns_to_aggregate = column_sums[column_sums < 500].index
-        df_combined['Other'] = df_combined[columns_to_aggregate].max(axis=1)
-        df_combined.drop(columns=columns_to_aggregate, inplace=True)
-
-        # These two categories were causing conflicts in DB so they are combined into one column each
-        if 'subcategory_Bein Adam L\'Chaveiro' in df_combined.columns and 'subcategory_Bein Adam l\'Chaveiro' in df_combined.columns:
-            df_combined['subcategory_Bein Adam L\'Chaveiro'] = df_combined[[
-                'subcategory_Bein Adam L\'Chaveiro', 'subcategory_Bein Adam l\'Chaveiro']].max(axis=1)
-            df_combined.drop(
-                columns=['subcategory_Bein Adam l\'Chaveiro'], inplace=True)
-        if 'subcategory_Beit HaMikdash' in df_combined.columns and 'subcategory_Beit Hamikdash' in df_combined.columns:
-            df_combined['subcategory_Beit HaMikdash'] = df_combined[[
-                'subcategory_Beit HaMikdash', 'subcategory_Beit Hamikdash']].max(axis=1)
-            df_combined.drop(
-                columns=['subcategory_Beit Hamikdash'], inplace=True)
+        col_pairs = [
+            ('subcategory_Bein Adam L\'Chaveiro', 'subcategory_Bein Adam l\'Chaveiro'), 
+            ('subcategory_Beit HaMikdash', 'subcategory_Beit Hamikdash'),
+            ('subcategory_Berachos', 'subcategory_Berachot'),
+            ('subcategory_Berachos', 'subcategory_Brachot'),
+            ('subcategory_Peah', 'subcategory_Pe\'ah'),
+            ('subcategory_Terumos', 'subcategory_Terumot'),
+            ('subcategory_Maaser Sheni', 'subcategory_Ma\'aser Sheni'),
+            ('subcategory_Challah', 'subcategory_Chala'),
+            ('subcategory_Maaseros', 'subcategory_Ma\'asrot'),
+            ('subcategory_Orla', 'subcategory_Orlah'),
+            ('subcategory_Sheviis', 'subcategory_Shevi\'it'),
+            ('subcategory_Shabbos', 'subcategory_Shabbat'),
+            ('subcategory_Yuma', 'subcategory_Yoma'),
+            ('subcategory_Chagiga', 'subcategory_Chagigah'),
+            ('subcategory_Moed Katan', 'subcategory_Moed Kattan'),
+            ('subcategory_Taanis', 'subcategory_Ta\'anit'),
+            ('subcategory_Taanis', 'subcategory_Taanit'),
+            ('subcategory_Yevamos', 'subcategory_Yevamot'),
+            ('subcategory_Kesubos', 'subcategory_Ketuvot'),
+            ('subcategory_Bava Basra', 'subcategory_Bava Batra'),
+            ('subcategory_Shavuos', 'subcategory_Shevuot'),
+            ('subcategory_Makkos', 'subcategory_Makkot'),
+            ('subcategory_Makkos', 'subcategory_Makot'),
+            ('subcategory_Avoda Zara', 'subcategory_Avodah Zara'),
+            ('subcategory_Horayos', 'subcategory_Horayot'),
+            ('subcategory_Nidah', 'subcategory_Niddah')
+            ]
+        for col1, col2 in col_pairs:
+            df_combined[col1] = df_combined[[col1, col2]].max(axis=1)
+            df_combined.drop(columns=[col2], inplace=True)
+        df_combined['subcategory_Tazria-Metzora'] = df_combined[['subcategory_Tazria', 'subcategory_Metzora']].max(axis=1)
+        df_combined['subcategory_Nitzavim-Vayeilech'] = df_combined[['subcategory_Nitzavim', 'subcategory_Vayeilech']].max(axis=1)
 
         self.df_categories = df_combined.reset_index()
 

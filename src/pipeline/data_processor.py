@@ -4,6 +4,8 @@ from enum import Enum
 from .user_taste import UserTaste
 from .db_connection import db_connection
 from ..logging_config import setup_logging
+from .calendar_generator import generate_calendar
+
 
 logger = setup_logging()
 
@@ -14,7 +16,7 @@ class CleanedData(Enum):
     FAVORITES = "favorites_cleaned"
     CATEGORIES = "categories_cleaned"
     USER_TASTE = "user_taste_cleaned"
-
+    CALENDAR = "cycles_calendar"
 
 class DataProcessor:
     def __init__(self):
@@ -73,6 +75,17 @@ class DataProcessor:
         self.__save_to_db(df_favorites, CleanedData.FAVORITES)
         self.__save_to_db(df_categories, CleanedData.CATEGORIES)
         self.__save_to_db(df_user_taste, CleanedData.USER_TASTE)
+        if self.need_to_generate_calendar():
+            df_calendar: pd.DataFrame = generate_calendar()
+            df_calendar.to_csv(f"{CleanedData.CALENDAR.value}.csv")
+            self.__save_to_db(df_calendar, CleanedData.CALENDAR)
+    
+    def need_to_generate_calendar(self) -> bool:
+        cur = self.db.cursor()
+        listOfTables = cur.execute(
+            """SELECT name FROM sqlite_master WHERE type='table' 
+            AND name='cycles_calendar'; """).fetchall()
+        return not listOfTables if not listOfTables else True
 
 
 if __name__ == "__main__":
