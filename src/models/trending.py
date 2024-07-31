@@ -21,44 +21,42 @@ class Trending:
         trending_shiurim = self.__get_popularity(filtered)
         return dict(zip(trending_shiurim.index[:top_n],trending_shiurim['full_details'][:top_n]))
 
-    def __get_top_recent_shiurim(self, past_days: int = 7) -> pd.DataFrame:
-        interactions = self.__get_recent_interactions(past_days)
+    def __get_counts(self, filtered_df) -> pd.DataFrame:
+        played = filtered_df[filtered_df['played'] == 1].groupby('shiur')
+        queued = filtered_df.dropna(subset='queue_date').groupby('shiur')
 
-        played = interactions[interactions['played'] == 1].groupby('shiur')
-        queued = interactions.dropna(subset='queue_date').groupby('shiur')
+        filtered_df['total_listens'] = played['played'].count()
+        filtered_df['total_queues'] = queued['queue_date'].count()
+        filtered_df = filtered_df.fillna(0)
+        filtered_df['full_details'] = filtered_df['full_details'].astype(str)
+        filtered_df['total_interactions'] = filtered_df['total_listens'] + \
+            filtered_df['total_queues']
 
-        self.merged['total_listens'] = played['played'].count()
-        self.merged['total_queues'] = queued['queue_date'].count()
-        self.merged = self.merged.fillna(0)
-        self.merged['full_details'] = self.merged['full_details'].astype(str)
-        self.merged['total_interactions'] = self.merged['total_listens'] + \
-            self.merged['total_queues']
+        return filtered_df.sort_values(by='total_interactions', ascending=False)
 
-        return self.merged.sort_values(by='total_interactions', ascending=False)
-
-    def __get_popularity(self) -> pd.DataFrame:
-        self.merged = self.__get_top_recent_shiurim()
-        self.merged['normalized_listens'] = (
-            (self.merged['total_listens'] - self.merged['total_listens'].min()) /
-            (self.merged['total_listens'].max() - self.merged['total_listens'].min())
+    def __get_popularity(self, filtered_df) -> pd.DataFrame:
+        filtered_df = self.__get_counts(filtered_df)
+        filtered_df['normalized_listens'] = (
+            (filtered_df['total_listens'] - filtered_df['total_listens'].min()) /
+            (filtered_df['total_listens'].max() - filtered_df['total_listens'].min())
         )
-        self.merged['normalized_queues'] = (
-            (self.merged['total_queues'] - self.merged['total_queues'].min()) /
-            (self.merged['total_queues'].max() - self.merged['total_queues'].min())
+        filtered_df['normalized_queues'] = (
+            (filtered_df['total_queues'] - filtered_df['total_queues'].min()) /
+            (filtered_df['total_queues'].max() - filtered_df['total_queues'].min())
         )
 
         weight_listens = 0.7
         weight_queues = 0.3
 
-        self.merged['popularity'] = (
-            (weight_listens * self.merged['normalized_listens']) +
-            (weight_queues * self.merged['normalized_queues'])
+        filtered_df['popularity'] = (
+            (weight_listens * filtered_df['normalized_listens']) +
+            (weight_queues * filtered_df['normalized_queues'])
         )
 
-        self.merged.drop(columns=['normalized_listens',
+        filtered_df.drop(columns=['normalized_listens',
                      'normalized_queues'], inplace=True)
 
-        return self.merged.sort_values(by='popularity', ascending=False)
+        return filtered_df.sort_values(by='popularity', ascending=False)
 
     def __filter(self, past_days: int = 7,feature_key: str = None, feature_value: str = None) -> pd.DataFrame:
         filtered_shiurim = self.__get_recent_interactions(past_days)
