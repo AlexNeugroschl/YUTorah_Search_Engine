@@ -29,9 +29,27 @@ class CycleRecommendations():
           for cycle in LearningCycle:
                recommendations = self.get_learning_cycle_recommendations(cycle, date)
                all_recommendations.extend(recommendations)
-          all_recommendations.extend(self.get_holiday(date, date+timedelta(3)))
+          all_recommendations.extend(self.get_holiday_recommendations(date, date+timedelta(days=3)))
           return all_recommendations
 
+     def get_daf_recommendations(self, date:date=date.today):
+          return self.get_learning_cycle_recommendations(LearningCycle.DAF, date)
+     
+     def get_weekly_daf_recommendations(self, date:date=date.today):
+          return self.get_learning_cycle_recommendations(LearningCycle.DAF, date)
+     
+     def get_mishnah_recommendations(self, date:date=date.today):
+          return self.get_learning_cycle_recommendations(LearningCycle.WEEKLY_DAF, date)
+     
+     def get_parsha_recommendations(self, date:date=date.today):
+          return self.get_learning_cycle_recommendations(LearningCycle.PARSHA, date)
+     
+     def get_nach_recommendations(self, date:date=date.today):
+          return self.get_learning_cycle_recommendations(LearningCycle.NACH, date)
+     
+     def get_yerushalmi_recommendations(self, date:date=date.today):
+          return self.get_learning_cycle_recommendations(LearningCycle.YERUSHALMI, date)
+     
      def get_learning_cycle_recommendations(self, cycle:LearningCycle, date:date=date.today()):
           if isinstance(date, str):
             date = datetime.strptime(date, "%Y-%m-%d").date()
@@ -39,16 +57,16 @@ class CycleRecommendations():
                return []
           date_data = self.calendar[self.calendar['date'] == str(date)]
           if cycle in [LearningCycle.DAF, LearningCycle.WEEKLY_DAF, LearningCycle.NACH, LearningCycle.YERUSHALMI]:
-               df = self.get_standard_learning(cycle, date_data)
+               df = self.__calculate_standard_learning(cycle, date_data)
           elif cycle == LearningCycle.PARSHA:
-               df = self.get_parsha_recommendations(cycle, date_data)
+               df = self.__calculate_parsha_recommendations(cycle, date_data)
           elif cycle == LearningCycle.MISHNAH:
-               df = self.get_mishna_recommendation(cycle, date_data)
+               df = self.__calculate_mishna_recommendation(cycle, date_data)
           else:
                return []
           return(df["shiur"].tolist())
 
-     def get_standard_learning(self, cycle:LearningCycle, row:pd.DataFrame):
+     def __calculate_standard_learning(self, cycle:LearningCycle, row:pd.DataFrame):
           subcategory = row.iloc[0][cycle.value[2]]
           subcategory = f'[{subcategory}]' if ' ' in subcategory else subcategory
           df = self.df_merged.loc[
@@ -62,7 +80,7 @@ class CycleRecommendations():
           filtered_df = filtered_df.drop(columns=['numbers'])
           return filtered_df
 
-     def get_parsha_recommendations(self, cycle:LearningCycle, row:pd.DataFrame):
+     def __calculate_parsha_recommendations(self, cycle:LearningCycle, row:pd.DataFrame):
           subcategory = row.iloc[0][cycle.value[1]]
           subcategory = f'[{subcategory}]' if ' ' in subcategory else subcategory
           filtered_df = self.df_merged[
@@ -71,7 +89,7 @@ class CycleRecommendations():
           ]
           return filtered_df
 
-     def get_mishna_recommendation(self, cycle:LearningCycle, row:pd.DataFrame):
+     def __calculate_mishna_recommendation(self, cycle:LearningCycle, row:pd.DataFrame):
           subcategory = row.iloc[0][cycle.value[2]]
           subcategory = f'[{subcategory}]' if ' ' in subcategory else subcategory
           df = self.df_merged.loc[
@@ -89,7 +107,7 @@ class CycleRecommendations():
      def __extract_numbers(self, title):
           return [int(num) for num in re.findall(r'\b\d+\b|(?<=[:\-])\d+', title)]
 
-     def get_holiday(self, start_date:date=date.today(), end_date:date=date.today()+timedelta(3)):
+     def get_holiday_recommendations(self, start_date:date=date.today(), end_date:date=date.today()+timedelta(days=3)):
           if isinstance(start_date, str):
             start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
             end_date = datetime.strptime(end_date, "%Y-%m-%d").date()

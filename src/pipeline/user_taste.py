@@ -63,6 +63,7 @@ class UserTaste:
         self.__get_average_listen_of_shiur(chunk_listened_df, chunk_queued_df, users_chunk)
         self.__get_average_listen_percentage(chunk_listened_df, chunk_queued_df, users_chunk)
         self.__get_most_recent_shiurs(chunk_listened_df, chunk_queued_df, users_chunk)
+        self.__get_favorite_cycles(chunk_bookmark_shiur_df, users_chunk)
 
     def __get_listened_df(self, df_bookmarks):
         return df_bookmarks[(df_bookmarks['played'] == 1) & (df_bookmarks['bookmark'] == 'lastPlayed')]
@@ -199,3 +200,15 @@ class UserTaste:
 
         self.shiur_stats_df.loc[users_chunk, 'most_recent_shiur_details'] = self.shiur_stats_df.loc[users_chunk, 'most_recent_shiurs_id'].apply(
             get_shiur_details)
+
+    def __get_favorite_cycles(self, bookmark_shiur_df, users_chunk):
+        series_list = ["Daf Yomi", "Daf Hashvua", "Mishna Yomi LZN Daniel Ari ben Avraham Kadesh", "Nach Yomi", "Yerushalmi Yomi"]
+        filtered_df = bookmark_shiur_df[bookmark_shiur_df['series_name'].isin(series_list)]
+        filtered_df = filtered_df.drop_duplicates(subset=['user', 'shiur'])
+        series_counts = filtered_df.groupby(['user', 'series_name']).size().unstack(fill_value=0)
+        for series in series_list:
+            if series not in series_counts.columns:
+                series_counts[series] = 0
+        series_counts = series_counts.reindex(users_chunk, fill_value=0)
+        for user in users_chunk['user']:
+

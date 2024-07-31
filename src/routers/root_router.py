@@ -36,9 +36,6 @@ def get_because_you_listened_recommendations(user_id: int, top_n: int = 5):
             f"Shiur ID {user_id} not found in the similarity matrix.")
         raise HTTPException(status_code=404, detail="Shiur ID not found")
     
-@router.get("/cycle-recommendations-all")
-def get_todays_recommendations(date=date.today()):
-    return cycle_recommendations.get_all_recommendations(date)
 @router.get("/trending",response_model=Dict[int,str])
 def get_trending(top_n: int = 5 , past_days: int = 7):
     recommendations = trending.get_trending(top_n=top_n,past_days=past_days)
@@ -54,10 +51,34 @@ def get_trending_filtered(feature_key,feature_value, top_n: int = 5, past_days: 
             f"Key-Value {feature_key}={feature_value} not found.")
         raise HTTPException(status_code=404, detail="Key-Value pair not found")
  
-@router.get("/cycle-recommendations/{cycle}", response_model=Dict[int, str])
-def get_learning_cycle_recommendations(cycle:LearningCycle, date=date.today()):
-    return cycle_recommendations.get_learning_cycle_recommendations(cycle, date)
+@router.get("/cycle-recommendations-all")
+def get_todays_recommendations(date=date.today()):
+    return cycle_recommendations.get_all_recommendations(date)
+
+@router.get("/cycle-recommendations/daf")
+def get_learning_cycle_recommendations(date=date.today()):
+    return cycle_recommendations.get_daf_recommendations(date)
+
+@router.get("/cycle-recommendations/weekly_daf")
+def get_learning_cycle_recommendations(date=date.today()):
+    return cycle_recommendations.get_weekly_daf_recommendations(date)
+
+@router.get("/cycle-recommendations/nach")
+def get_learning_cycle_recommendations(date=date.today()):
+    return cycle_recommendations.get_nach_recommendations(date)
+
+@router.get("/cycle-recommendations/parsha")
+def get_learning_cycle_recommendations(date=date.today()):
+    return cycle_recommendations.get_parsha_recommendations(date)
+
+@router.get("/cycle-recommendations/yerushalmi")
+def get_learning_cycle_recommendations(date=date.today()):
+    return cycle_recommendations.get_yerushalmi_recommendations(date)
+
+@router.get("/cycle-recommendations/mishna")
+def get_learning_cycle_recommendations(date=date.today()):
+    return cycle_recommendations.get_mishnah_recommendations(date)
     
-@router.get("/cycle-recommendations/holiday", response_model=Dict[int, str])
-def get_holiday_cycle_recommendations(start_date=date.today(), end_date=date.today()+3):
-    return cycle_recommendations.get_holiday(start_date, end_date)
+@router.get("/cycle-recommendations/holiday")
+def get_holiday_cycle_recommendations(start_date=date.today(), end_date=date.today()+timedelta(days=3)):
+    return cycle_recommendations.get_holiday_recommendations(start_date, end_date)
